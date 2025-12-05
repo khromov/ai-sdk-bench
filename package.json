@@ -8,5 +8,10 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "ai": "^6.0.0-beta.134",
+    "dotenv": "^17.2.3",
+    "zod": "^4.1.13"
   }
 }

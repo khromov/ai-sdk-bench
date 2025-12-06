@@ -47,48 +47,6 @@ interface ResultData {
 }
 
 /**
- * Simple markdown-to-HTML converter
- * Handles code blocks, headers, lists, bold, italic, and inline code
- */
-function markdownToHtml(markdown: string): string {
-  let html = markdown;
-
-  // Handle code blocks
-  html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (_, _lang, code) => {
-    return `<pre><code>${escapeHtml(code.trim())}</code></pre>`;
-  });
-
-  // Handle headers
-  html = html.replace(/^### (.*$)/gim, "<h3>$1</h3>");
-  html = html.replace(/^## (.*$)/gim, "<h2>$1</h2>");
-  html = html.replace(/^# (.*$)/gim, "<h1>$1</h1>");
-
-  // Handle bold
-  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-
-  // Handle italic
-  html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
-
-  // Handle inline code
-  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
-
-  // Handle unordered lists
-  html = html.replace(/^\- (.+$)/gim, "<li>$1</li>");
-  html = html.replace(/(<li>.*<\/li>)/s, "<ul>$1</ul>");
-
-  // Handle line breaks
-  html = html.replace(/\n\n/g, "</p><p>");
-  html = `<p>${html}</p>`;
-
-  // Clean up empty paragraphs
-  html = html.replace(/<p><\/p>/g, "");
-  html = html.replace(/<p>(<pre>|<h[123]>|<ul>)/g, "$1");
-  html = html.replace(/(<\/pre>|<\/h[123]>|<\/ul>)<\/p>/g, "$1");
-
-  return html;
-}
-
-/**
  * Escape HTML special characters
  */
 function escapeHtml(text: string): string {
@@ -99,7 +57,11 @@ function escapeHtml(text: string): string {
     '"': "&quot;",
     "'": "&#039;",
   };
-  return text.replace(/[&<>"']/g, (char) => map[char] ?? char);
+  let result = "";
+  for (const char of text) {
+    result += map[char] ?? char;
+  }
+  return result;
 }
 
 /**
@@ -179,7 +141,7 @@ function generateHtml(data: ResultData): string {
           <div class="section">
             <h3>Assistant Response</h3>
             <div class="content assistant-content">
-              ${markdownToHtml(assistantResponse)}
+              ${escapeHtml(assistantResponse)}
             </div>
           </div>
         </div>
@@ -326,68 +288,8 @@ function generateHtml(data: ResultData): string {
     .assistant-content {
       background-color: #fafafa;
       border-left: 3px solid #16a34a;
-    }
-
-    .assistant-content p {
-      margin-bottom: 0.75rem;
-    }
-
-    .assistant-content h1,
-    .assistant-content h2,
-    .assistant-content h3 {
-      margin-top: 1rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .assistant-content h1 {
-      font-size: 1.35rem;
-    }
-
-    .assistant-content h2 {
-      font-size: 1.2rem;
-    }
-
-    .assistant-content h3 {
-      font-size: 1.05rem;
-    }
-
-    .assistant-content pre {
-      background-color: #1e293b;
-      padding: 0.75rem;
-      border-radius: 4px;
-      overflow-x: auto;
-      margin: 0.75rem 0;
-    }
-
-    .assistant-content pre code {
-      font-family: "Courier New", Courier, monospace;
-      font-size: 0.85rem;
-      color: #e2e8f0;
-      background: none;
-      padding: 0;
-    }
-
-    .assistant-content p code {
-      font-family: "Courier New", Courier, monospace;
-      font-size: 0.85rem;
-      background-color: #e5e7eb;
-      padding: 0.15rem 0.35rem;
-      border-radius: 3px;
-      color: #dc2626;
-    }
-
-    .assistant-content ul {
-      margin-left: 1.5rem;
-      margin-bottom: 0.75rem;
-    }
-
-    .assistant-content li {
-      margin-bottom: 0.35rem;
-    }
-
-    .assistant-content strong {
-      font-weight: 600;
-      color: #1a1a1a;
+      font-family: monospace;
+      white-space: pre-wrap;
     }
 
     @media (max-width: 768px) {
@@ -437,6 +339,9 @@ export async function generateReport(
     await writeFile(outputPath, html, "utf-8");
 
     console.log(`✓ Report generated successfully: ${outputPath}`);
+
+    // Open the report in the default browser
+    Bun.spawn(["open", outputPath]);
   } catch (error) {
     console.error("Error generating report:", error);
     throw error;

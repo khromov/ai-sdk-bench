@@ -15,7 +15,7 @@ const mcp_client = await createMCPClient({
 const svelte_agent = new Agent({
   model: anthropic("claude-haiku-4-5"),
   // tools: await mcp_client.tools(),
-  stopWhen: stepCountIs(2),
+  stopWhen: stepCountIs(5),
 });
 
 const result = await svelte_agent.generate({

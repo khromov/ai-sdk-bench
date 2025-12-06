@@ -137,68 +137,8 @@
     .assistant-content {
       background-color: #fafafa;
       border-left: 3px solid #16a34a;
-    }
-
-    .assistant-content p {
-      margin-bottom: 0.75rem;
-    }
-
-    .assistant-content h1,
-    .assistant-content h2,
-    .assistant-content h3 {
-      margin-top: 1rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .assistant-content h1 {
-      font-size: 1.35rem;
-    }
-
-    .assistant-content h2 {
-      font-size: 1.2rem;
-    }
-
-    .assistant-content h3 {
-      font-size: 1.05rem;
-    }
-
-    .assistant-content pre {
-      background-color: #1e293b;
-      padding: 0.75rem;
-      border-radius: 4px;
-      overflow-x: auto;
-      margin: 0.75rem 0;
-    }
-
-    .assistant-content pre code {
-      font-family: "Courier New", Courier, monospace;
-      font-size: 0.85rem;
-      color: #e2e8f0;
-      background: none;
-      padding: 0;
-    }
-
-    .assistant-content p code {
-      font-family: "Courier New", Courier, monospace;
-      font-size: 0.85rem;
-      background-color: #e5e7eb;
-      padding: 0.15rem 0.35rem;
-      border-radius: 3px;
-      color: #dc2626;
-    }
-
-    .assistant-content ul {
-      margin-left: 1.5rem;
-      margin-bottom: 0.75rem;
-    }
-
-    .assistant-content li {
-      margin-bottom: 0.35rem;
-    }
-
-    .assistant-content strong {
-      font-weight: 600;
-      color: #1a1a1a;
+      font-family: monospace;
+      white-space: pre-wrap;
     }
 
     @media (max-width: 768px) {
@@ -225,7 +165,7 @@
         <div class="step">
           <div class="step-header">
             <h2>Step 1</h2>
-            <span class="timestamp">Dec 6, 2025 at 02:47:46 AM</span>
+            <span class="timestamp">Dec 6, 2025 at 02:55:28 AM</span>
           </div>
 
           <div class="metadata">
@@ -246,11 +186,11 @@
             </div>
             <div class="usage-item">
               <span class="usage-label">Output Tokens:</span>
-              <span class="usage-value">824</span>
+              <span class="usage-value">864</span>
             </div>
             <div class="usage-item">
               <span class="usage-label">Total Tokens:</span>
-              <span class="usage-value">841</span>
+              <span class="usage-value">881</span>
             </div>
             
           </div>
@@ -265,84 +205,153 @@
           <div class="section">
             <h3>Assistant Response</h3>
             <div class="content assistant-content">
-              <h1>Svelte Counter Component</h1><p>Here's a simple counter component:</p><pre><code>&lt;script&gt;
-  let count = 0;</p><p>  function increment() {
+              # Svelte Counter Component
+
+Here&#039;s a simple counter component:
+
+```svelte
+&lt;script&gt;
+  let count = 0;
+
+  function increment() {
     count++;
-  }</p><p>  function decrement() {
+  }
+
+  function decrement() {
     count--;
-  }</p><p>  function reset() {
+  }
+
+  function reset() {
     count = 0;
   }
-&lt;/script&gt;</p><p>&lt;div class=&quot;counter&quot;&gt;
+&lt;/script&gt;
+
+&lt;div class=&quot;counter&quot;&gt;
   &lt;h1&gt;Counter: {count}&lt;/h1&gt;
-  
-  &lt;div class=&quot;buttons&quot;&gt;
-    &lt;button on:click={decrement}&gt;Decrement&lt;/button&gt;
-    &lt;button on:click={increment}&gt;Increment&lt;/button&gt;
-    &lt;button on:click={reset}&gt;Reset&lt;/button&gt;
-  &lt;/div&gt;
-&lt;/div&gt;</p><p>&lt;style&gt;
+  &lt;button on:click={increment}&gt;Increment&lt;/button&gt;
+  &lt;button on:click={decrement}&gt;Decrement&lt;/button&gt;
+  &lt;button on:click={reset}&gt;Reset&lt;/button&gt;
+&lt;/div&gt;
+
+&lt;style&gt;
   .counter {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2rem;
-    padding: 2rem;
-  }</p><p>  h1 {
-    font-size: 2rem;
-    color: #333;
-  }</p><p>  .buttons {
-    display: flex;
     gap: 1rem;
-  }</p><p>  button {
-    padding: 0.5rem 1rem;
+    padding: 2rem;
+    border: 2px solid #333;
+    border-radius: 8px;
+    max-width: 300px;
+    margin: 2rem auto;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 2.5rem;
+    color: #333;
+  }
+
+  button {
+    padding: 0.75rem 1.5rem;
     font-size: 1rem;
-    cursor: pointer;
     border: none;
     border-radius: 4px;
     background-color: #007bff;
     color: white;
-    transition: background-color 0.3s;
-  }</p><p>  button:hover {
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  button:hover {
     background-color: #0056b3;
-  }</p><p>  button:active {
+  }
+
+  button:active {
     transform: scale(0.98);
   }
-&lt;/style&gt;</code></pre><h2>Alternative: More Compact Version</h2><pre><code>&lt;script&gt;
-  let count = 0;
-&lt;/script&gt;</p><p>&lt;div class=&quot;counter&quot;&gt;
-  &lt;button on:click={() =&gt; count--}&gt;-&lt;/button&gt;
-  &lt;span&gt;{count}&lt;/span&gt;
-  &lt;button on:click={() =&gt; count++}&gt;+&lt;/button&gt;
-&lt;/div&gt;</p><p>&lt;style&gt;
-  .counter {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-  }</p><p>  button {
-    width: 40px;
-    height: 40px;
-    font-size: 1.2rem;
-    cursor: pointer;
-  }</p><p>  span {
-    font-size: 1.5rem;
-    min-width: 50px;
-    text-align: center;
-  }
-&lt;/style&gt;</code></pre><h2>With Props (Reusable)</h2><pre><code>&lt;script&gt;
+&lt;/style&gt;
+```
+
+## Advanced Version with Props
+
+If you want to make it reusable:
+
+```svelte
+&lt;script&gt;
   export let initialValue = 0;
   export let step = 1;
-  
+
   let count = initialValue;
-&lt;/script&gt;</p><p>&lt;div class=&quot;counter&quot;&gt;
-  &lt;button on:click={() =&gt; count -= step}&gt;-{step}&lt;/button&gt;
-  &lt;span&gt;{count}&lt;/span&gt;
-  &lt;button on:click={() =&gt; count += step}&gt;+{step}&lt;/button&gt;
-&lt;/div&gt;</p><p>&lt;!-- Usage in parent component --&gt;
-&lt;!-- &lt;Counter initialValue={10} step={5} /&gt; --&gt;</code></pre><h2>Key Svelte Features Used</h2><ul><li><strong>Reactive variables</strong>: <code>let count = 0</code> automatically updates the DOM</li>
-<li><strong>Event handlers</strong>: <code>on:click</code> directive</li>
-<li><strong>Scoped styles</strong>: CSS is automatically scoped to the component</li>
-<li><strong>Exported props</strong>: <code>export let</code> makes values configurable</li></ul><p>Choose the version that best fits your needs! The first is most feature-rich, the second is minimal, and the third is most reusable.</p>
+
+  function increment() {
+    count += step;
+  }
+
+  function decrement() {
+    count -= step;
+  }
+
+  function reset() {
+    count = initialValue;
+  }
+&lt;/script&gt;
+
+&lt;div class=&quot;counter&quot;&gt;
+  &lt;h1&gt;Counter: {count}&lt;/h1&gt;
+  &lt;div class=&quot;buttons&quot;&gt;
+    &lt;button on:click={decrement}&gt;−&lt;/button&gt;
+    &lt;button on:click={increment}&gt;+&lt;/button&gt;
+    &lt;button on:click={reset}&gt;Reset&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;style&gt;
+  .counter {
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+  }
+
+  button {
+    padding: 0.5rem 1rem;
+    font-size: 1.5rem;
+    border: none;
+    border-radius: 4px;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background-color: #0056b3;
+  }
+&lt;/style&gt;
+```
+
+## Usage Example
+
+```svelte
+&lt;script&gt;
+  import Counter from &#039;./Counter.svelte&#039;;
+&lt;/script&gt;
+
+&lt;Counter initialValue={10} step={5} /&gt;
+```
+
+**Key Svelte features used:**
+- `let` for reactive variables
+- `on:click` directive for event handling
+- Template variables with `{count}`
+- `export` for component props
+- Scoped styles with `&lt;style&gt;`
+
+Would you like me to add any additional features like animations, keyboard controls, or state persistence?
             </div>
           </div>
         </div>

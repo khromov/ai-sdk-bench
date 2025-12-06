@@ -133,16 +133,12 @@ function generateHtml(data: ResultData): string {
 
           <div class="section">
             <h3>User Prompt</h3>
-            <div class="content user-content">
-              ${escapeHtml(userPrompt)}
-            </div>
+            <div class="content user-content">${escapeHtml(userPrompt)}</div>
           </div>
 
           <div class="section">
             <h3>Assistant Response</h3>
-            <div class="content assistant-content">
-              ${escapeHtml(assistantResponse)}
-            </div>
+            <div class="content assistant-content">${escapeHtml(assistantResponse)}</div>
           </div>
         </div>
       `;

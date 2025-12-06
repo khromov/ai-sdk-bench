@@ -174,13 +174,17 @@ function generateHtml(data: ResultData): string {
           ? `, ${step.usage.cachedInputTokens.toLocaleString()}⚡`
           : "";
 
+      const inputTokens = step.usage.inputTokens;
+      const cachedTokens = step.usage.cachedInputTokens;
+      const uncachedInputTokens = inputTokens - cachedTokens;
+
       return `
     <details class="step">
       <summary class="step-header">
         <span class="step-num">Step ${index + 1}</span>
         <span class="line"></span>
-        <span class="tokens">${step.usage.totalTokens.toLocaleString()} tok</span>
-        <span class="output">(${step.usage.outputTokens.toLocaleString()}↑${cachedInfo})</span>
+        <span class="tokens" title="Total tokens: ${step.usage.totalTokens.toLocaleString()}&#10;Input: ${inputTokens.toLocaleString()} (${uncachedInputTokens.toLocaleString()} new + ${cachedTokens.toLocaleString()} cached)&#10;Output: ${step.usage.outputTokens.toLocaleString()}">${step.usage.totalTokens.toLocaleString()} tok</span>
+        <span class="output" title="Output tokens generated: ${step.usage.outputTokens.toLocaleString()}&#10;${cachedTokens > 0 ? `Cached input tokens (⚡): ${cachedTokens.toLocaleString()} (not billed)` : 'No cached tokens'}">(${step.usage.outputTokens.toLocaleString()}↑${cachedInfo})</span>
         <span class="reason">${step.finishReason}</span>
       </summary>
       <div class="step-content">
@@ -320,10 +324,14 @@ function generateHtml(data: ResultData): string {
 
     .tokens {
       color: var(--text-muted);
+      cursor: help;
+      border-bottom: 1px dotted var(--text-muted);
     }
 
     .output {
       color: var(--text);
+      cursor: help;
+      border-bottom: 1px dotted var(--text-muted);
     }
 
     .reason {

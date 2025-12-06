@@ -120,10 +120,14 @@
 
     .tokens {
       color: var(--text-muted);
+      cursor: help;
+      border-bottom: 1px dotted var(--text-muted);
     }
 
     .output {
       color: var(--text);
+      cursor: help;
+      border-bottom: 1px dotted var(--text-muted);
     }
 
     .reason {
@@ -235,7 +239,7 @@
   <header>
     <div>
       <h1>SvelteBench 2.0</h1>
-      <div class="meta">claude-haiku-4-5-20251001 · 2 steps · 5,703 tokens · Dec 6, 2025 at 07:31:05 PM</div>
+      <div class="meta">x-ai/grok-code-fast-1 · 3 steps · 7,642 tokens · Dec 6, 2025 at 07:46:34 PM</div>
     </div>
     <button class="theme-toggle" onclick="toggleTheme()">◐</button>
   </header>
@@ -245,16 +249,41 @@
       <summary class="step-header">
         <span class="step-num">Step 1</span>
         <span class="line"></span>
-        <span class="tokens">2,528 tok</span>
-        <span class="output">(617↑)</span>
+        <span class="tokens" title="Total tokens: 1,961&#10;Input: 1,493 (1,173 new + 320 cached)&#10;Output: 468">1,961 tok</span>
+        <span class="output" title="Output tokens generated: 468&#10;Cached input tokens (⚡): 320 (not billed)">(468↑, 320⚡)</span>
         <span class="reason">tool-calls</span>
       </summary>
       <div class="step-content">
-        <div class="text">I&#039;ll build a counter component in Svelte 5 for you. Let me first create the component and then validate it.</div><details class="tool">
+        <details class="tool">
   <summary><span class="arrow">→</span> <span class="tool-name">svelte-autofixer</span></summary>
   <pre class="input">{
-  &quot;code&quot;: &quot;&lt;script&gt;\n  let count = $state(0);\n\n  function increment() {\n    count++;\n  }\n\n  function decrement() {\n    count--;\n  }\n\n  function reset() {\n    count = 0;\n  }\n&lt;/script&gt;\n\n&lt;div class=\&quot;counter\&quot;&gt;\n  &lt;h1&gt;Counter&lt;/h1&gt;\n  &lt;p class=\&quot;count-display\&quot;&gt;{count}&lt;/p&gt;\n  &lt;div class=\&quot;button-group\&quot;&gt;\n    &lt;button onclick={decrement}&gt;-&lt;/button&gt;\n    &lt;button onclick={reset}&gt;Reset&lt;/button&gt;\n    &lt;button onclick={increment}&gt;+&lt;/button&gt;\n  &lt;/div&gt;\n&lt;/div&gt;\n\n&lt;style&gt;\n  .counter {\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    justify-content: center;\n    padding: 2rem;\n    border: 2px solid #333;\n    border-radius: 8px;\n    background-color: #f5f5f5;\n    width: fit-content;\n    margin: 0 auto;\n  }\n\n  h1 {\n    margin: 0 0 1rem 0;\n    font-size: 1.5rem;\n    color: #333;\n  }\n\n  .count-display {\n    font-size: 3rem;\n    font-weight: bold;\n    color: #007bff;\n    margin: 1rem 0;\n  }\n\n  .button-group {\n    display: flex;\n    gap: 0.5rem;\n  }\n\n  button {\n    padding: 0.75rem 1.5rem;\n    font-size: 1rem;\n    border: none;\n    border-radius: 4px;\n    background-color: #007bff;\n    color: white;\n    cursor: pointer;\n    transition: background-color 0.2s;\n  }\n\n  button:hover {\n    background-color: #0056b3;\n  }\n\n  button:active {\n    transform: scale(0.98);\n  }\n&lt;/style&gt;&quot;,
-  &quot;desired_svelte_version&quot;: 5,
+  &quot;code&quot;: &quot;&lt;script&gt;\n  let count = $state(0);\n\n  function increment() {\n    count++;\n  }\n\n  function decrement() {\n    count--;\n  }\n\n  function reset() {\n    count = 0;\n  }\n&lt;/script&gt;\n\n&lt;p&gt;Count: {count}&lt;/p&gt;\n&lt;button on:click={increment}&gt;+&lt;/button&gt;\n&lt;button on:click={decrement}&gt;-&lt;/button&gt;\n&lt;button on:click={reset}&gt;Reset&lt;/button&gt;\n\n&lt;style&gt;\n  /* Optional styling */\n&lt;/style&gt;&quot;,
+  &quot;desired_svelte_version&quot;: &quot;5&quot;,
+  &quot;async&quot;: false,
+  &quot;filename&quot;: &quot;Counter.svelte&quot;
+}</pre>
+</details><details class="result ">
+  <summary><span class="status success">✓</span> Output</summary>
+  <pre class="output">{&quot;issues&quot;:[&quot;Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead\nhttps://svelte.dev/e/event_directive_deprecated at line 18, column 8&quot;,&quot;Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead\nhttps://svelte.dev/e/event_directive_deprecated at line 19, column 8&quot;,&quot;Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead\nhttps://svelte.dev/e/event_directive_deprecated at line 20, column 8&quot;],&quot;suggestions&quot;:[],&quot;require_another_tool_call_after_fixing&quot;:true}</pre>
+</details>
+      </div>
+    </details>
+
+    <details class="step">
+      <summary class="step-header">
+        <span class="step-num">Step 2</span>
+        <span class="line"></span>
+        <span class="tokens" title="Total tokens: 2,731&#10;Input: 2,287 (367 new + 1,920 cached)&#10;Output: 444">2,731 tok</span>
+        <span class="output" title="Output tokens generated: 444&#10;Cached input tokens (⚡): 1,920 (not billed)">(444↑, 1,920⚡)</span>
+        <span class="reason">tool-calls</span>
+      </summary>
+      <div class="step-content">
+        <details class="tool">
+  <summary><span class="arrow">→</span> <span class="tool-name">svelte-autofixer</span></summary>
+  <pre class="input">{
+  &quot;code&quot;: &quot;&lt;script&gt;\n  let count = $state(0);\n\n  function increment() {\n    count++;\n  }\n\n  function decrement() {\n    count--;\n  }\n\n  function reset() {\n    count = 0;\n  }\n&lt;/script&gt;\n\n&lt;p&gt;Count: {count}&lt;/p&gt;\n&lt;button onclick={increment}&gt;+&lt;/button&gt;\n&lt;button onclick={decrement}&gt;-&lt;/button&gt;\n&lt;button onclick={reset}&gt;Reset&lt;/button&gt;&quot;,
+  &quot;desired_svelte_version&quot;: &quot;5&quot;,
+  &quot;async&quot;: false,
   &quot;filename&quot;: &quot;Counter.svelte&quot;
 }</pre>
 </details><details class="result ">
@@ -266,17 +295,17 @@
 
     <details class="step">
       <summary class="step-header">
-        <span class="step-num">Step 2</span>
+        <span class="step-num">Step 3</span>
         <span class="line"></span>
-        <span class="tokens">3,175 tok</span>
-        <span class="output">(563↑)</span>
+        <span class="tokens" title="Total tokens: 2,950&#10;Input: 2,796 (108 new + 2,688 cached)&#10;Output: 154">2,950 tok</span>
+        <span class="output" title="Output tokens generated: 154&#10;Cached input tokens (⚡): 2,688 (not billed)">(154↑, 2,688⚡)</span>
         <span class="reason">tool-calls</span>
       </summary>
       <div class="step-content">
-        <div class="text">Perfect! The counter component is valid. Now let me write it to a file for you:</div><details class="tool">
+        <details class="tool">
   <summary><span class="arrow">→</span> <span class="tool-name">ResultWrite</span></summary>
   <pre class="input">{
-  &quot;content&quot;: &quot;&lt;script&gt;\n  let count = $state(0);\n\n  function increment() {\n    count++;\n  }\n\n  function decrement() {\n    count--;\n  }\n\n  function reset() {\n    count = 0;\n  }\n&lt;/script&gt;\n\n&lt;div class=\&quot;counter\&quot;&gt;\n  &lt;h1&gt;Counter&lt;/h1&gt;\n  &lt;p class=\&quot;count-display\&quot;&gt;{count}&lt;/p&gt;\n  &lt;div class=\&quot;button-group\&quot;&gt;\n    &lt;button onclick={decrement}&gt;-&lt;/button&gt;\n    &lt;button onclick={reset}&gt;Reset&lt;/button&gt;\n    &lt;button onclick={increment}&gt;+&lt;/button&gt;\n  &lt;/div&gt;\n&lt;/div&gt;\n\n&lt;style&gt;\n  .counter {\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    justify-content: center;\n    padding: 2rem;\n    border: 2px solid #333;\n    border-radius: 8px;\n    background-color: #f5f5f5;\n    width: fit-content;\n    margin: 0 auto;\n  }\n\n  h1 {\n    margin: 0 0 1rem 0;\n    font-size: 1.5rem;\n    color: #333;\n  }\n\n  .count-display {\n    font-size: 3rem;\n    font-weight: bold;\n    color: #007bff;\n    margin: 1rem 0;\n  }\n\n  .button-group {\n    display: flex;\n    gap: 0.5rem;\n  }\n\n  button {\n    padding: 0.75rem 1.5rem;\n    font-size: 1rem;\n    border: none;\n    border-radius: 4px;\n    background-color: #007bff;\n    color: white;\n    cursor: pointer;\n    transition: background-color 0.2s;\n  }\n\n  button:hover {\n    background-color: #0056b3;\n  }\n\n  button:active {\n    transform: scale(0.98);\n  }\n&lt;/style&gt;&quot;
+  &quot;content&quot;: &quot;&lt;script&gt;\n  let count = $state(0);\n\n  function increment() {\n    count++;\n  }\n\n  function decrement() {\n    count--;\n  }\n\n  function reset() {\n    count = 0;\n  }\n&lt;/script&gt;\n\n&lt;p&gt;Count: {count}&lt;/p&gt;\n&lt;button onclick={increment}&gt;+&lt;/button&gt;\n&lt;button onclick={decrement}&gt;-&lt;/button&gt;\n&lt;button onclick={reset}&gt;Reset&lt;/button&gt;&quot;
 }</pre>
 </details><details class="result ">
   <summary><span class="status success">✓</span> Output</summary>
@@ -303,67 +332,10 @@
   }
 &lt;/script&gt;
 
-&lt;div class=&quot;counter&quot;&gt;
-  &lt;h1&gt;Counter&lt;/h1&gt;
-  &lt;p class=&quot;count-display&quot;&gt;{count}&lt;/p&gt;
-  &lt;div class=&quot;button-group&quot;&gt;
-    &lt;button onclick={decrement}&gt;-&lt;/button&gt;
-    &lt;button onclick={reset}&gt;Reset&lt;/button&gt;
-    &lt;button onclick={increment}&gt;+&lt;/button&gt;
-  &lt;/div&gt;
-&lt;/div&gt;
-
-&lt;style&gt;
-  .counter {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
-    border: 2px solid #333;
-    border-radius: 8px;
-    background-color: #f5f5f5;
-    width: fit-content;
-    margin: 0 auto;
-  }
-
-  h1 {
-    margin: 0 0 1rem 0;
-    font-size: 1.5rem;
-    color: #333;
-  }
-
-  .count-display {
-    font-size: 3rem;
-    font-weight: bold;
-    color: #007bff;
-    margin: 1rem 0;
-  }
-
-  .button-group {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  button {
-    padding: 0.75rem 1.5rem;
-    font-size: 1rem;
-    border: none;
-    border-radius: 4px;
-    background-color: #007bff;
-    color: white;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-
-  button:hover {
-    background-color: #0056b3;
-  }
-
-  button:active {
-    transform: scale(0.98);
-  }
-&lt;/style&gt;</pre>
+&lt;p&gt;Count: {count}&lt;/p&gt;
+&lt;button onclick={increment}&gt;+&lt;/button&gt;
+&lt;button onclick={decrement}&gt;-&lt;/button&gt;
+&lt;button onclick={reset}&gt;Reset&lt;/button&gt;</pre>
     </section>
 
   <script>

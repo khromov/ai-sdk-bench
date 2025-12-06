@@ -1,7 +1,7 @@
-diff --git a/dist/index.mjs b/dist/index.mjs
-index 20ede4e4818ff1ef2ac79b3e0bd3b43f7962b147..2af9321d12cf56b3f61c7ab57808b51e88031134 100644
---- a/dist/index.mjs
-+++ b/dist/index.mjs
+diff --git a/node_modules/@ai-sdk/mcp/dist/index.mjs b/node_modules/@ai-sdk/mcp/dist/index.mjs
+index 0000000..0000000 100644
+--- a/node_modules/@ai-sdk/mcp/dist/index.mjs
++++ b/node_modules/@ai-sdk/mcp/dist/index.mjs
 @@ -1350,7 +1350,7 @@ var HttpMCPTransport = class {
                  const { done, value } = await reader.read();
                  if (done) return;

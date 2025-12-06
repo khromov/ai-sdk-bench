@@ -4,19 +4,20 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "update": "bun update --interactive"
   },
   "devDependencies": {
     "@types/bun": "^1.3.3",
     "patch-package": "^8.0.1"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.53",
-    "@ai-sdk/mcp": "^0.0.11",
-    "ai": "5",
+    "@ai-sdk/mcp": "0.0.11",
+    "ai": "^5.0.108",
     "zod": "^4.1.13"
   }
 }

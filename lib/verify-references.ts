@@ -10,6 +10,11 @@ interface TestDefinition {
   promptFile: string;
 }
 
+interface FailedTest {
+  fullName: string;
+  errorMessage: string;
+}
+
 interface TestResult {
   testName: string;
   passed: boolean;
@@ -18,6 +23,7 @@ interface TestResult {
   numFailed: number;
   duration: number;
   error?: string;
+  failedTests?: FailedTest[];
 }
 
 interface VitestJsonOutput {
@@ -26,6 +32,12 @@ interface VitestJsonOutput {
     status: string;
     startTime: number;
     endTime: number;
+    assertionResults?: Array<{
+      ancestorTitles: string[];
+      title: string;
+      status: string;
+      failureMessages?: string[];
+    }>;
   }>;
   numTotalTests: number;
   numPassedTests: number;
@@ -147,6 +159,28 @@ export async function runTest(testDef: TestDefinition): Promise<TestResult> {
       }
     }
 
+    // Collect failed test details
+    const failedTests: FailedTest[] = [];
+    for (const testResult of jsonOutput.testResults) {
+      if (testResult.assertionResults) {
+        for (const assertion of testResult.assertionResults) {
+          if (assertion.status === "failed") {
+            const fullName =
+              assertion.ancestorTitles.length > 0
+                ? `${assertion.ancestorTitles.join(" > ")} > ${assertion.title}`
+                : assertion.title;
+
+            const errorMessage = assertion.failureMessages?.join("\n") || "No error message available";
+
+            failedTests.push({
+              fullName,
+              errorMessage,
+            });
+          }
+        }
+      }
+    }
+
     return {
       testName: testDef.name,
       passed: jsonOutput.numFailedTests === 0,
@@ -154,6 +188,7 @@ export async function runTest(testDef: TestDefinition): Promise<TestResult> {
       numPassed: jsonOutput.numPassedTests,
       numFailed: jsonOutput.numFailedTests,
       duration,
+      failedTests: failedTests.length > 0 ? failedTests : undefined,
     };
   } catch (error) {
     return {
@@ -186,6 +221,13 @@ export function printSummary(results: TestResult[]): void {
 
     if (result.error) {
       console.log(`  Error: ${result.error}`);
+    }
+
+    if (!result.passed && result.failedTests && result.failedTests.length > 0) {
+      console.log("  Failed tests:");
+      for (const failed of result.failedTests) {
+        console.log(`    ✗ ${failed.fullName}`);
+      }
     }
   }
 
@@ -231,6 +273,20 @@ export async function verifyAllReferences(): Promise<number> {
         console.log(`  ✗ Tests failed (${result.numFailed}/${result.numTests} failed)`);
         if (result.error) {
           console.log(`  Error: ${result.error}`);
+        }
+        if (result.failedTests && result.failedTests.length > 0) {
+          console.log("\n  Failed tests:");
+          for (const failed of result.failedTests) {
+            console.log(`    ✗ ${failed.fullName}`);
+            // Print error message with indentation
+            const errorLines = failed.errorMessage.split("\n");
+            for (const line of errorLines) {
+              if (line.trim()) {
+                console.log(`      ${line}`);
+              }
+            }
+          }
+          console.log();
         }
       }
     } finally {

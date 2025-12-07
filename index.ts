@@ -59,7 +59,9 @@ const tools = {
       content: z.string().describe("The content to write to the result file"),
     }),
     execute: async ({ content }) => {
-      console.log("[ResultWrite called]", content);
+      const contentPreview =
+        content.length > 100 ? content.slice(0, 100) + "..." : content;
+      console.log("[ResultWrite called]", contentPreview);
       return { success: true };
     },
   }),

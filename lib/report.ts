@@ -179,6 +179,14 @@ function generateHtml(data: ResultData): string {
     ? `<span class="mcp-badge enabled" title="MCP Server: ${escapeHtml(summary.mcpServerUrl || '')}">MCP ✓</span>`
     : `<span class="mcp-badge disabled">MCP ✗</span>`;
 
+  const mcpNotice = !summary.mcpEnabled
+    ? `
+  <div class="mcp-notice">
+    <span class="notice-icon">ℹ️</span>
+    <span class="notice-text">MCP integration was not used in this benchmark. The agent ran with built-in tools only.</span>
+  </div>`
+    : "";
+
   const stepsHtml = data.steps
     .map((step, index) => {
       const assistantContentHtml =
@@ -236,6 +244,8 @@ function generateHtml(data: ResultData): string {
       --tool: #8250df;
       --mcp-enabled: #0969da;
       --mcp-disabled: #6a737d;
+      --notice-bg: #ddf4ff;
+      --notice-border: #54aeff;
     }
 
     [data-theme="dark"] {
@@ -249,6 +259,8 @@ function generateHtml(data: ResultData): string {
       --tool: #a371f7;
       --mcp-enabled: #58a6ff;
       --mcp-disabled: #8b949e;
+      --notice-bg: #1c2d41;
+      --notice-border: #388bfd;
     }
 
     * {
@@ -313,6 +325,28 @@ function generateHtml(data: ResultData): string {
       background: var(--bg);
       border: 1px solid var(--border);
       color: var(--text-muted);
+    }
+
+    .mcp-notice {
+      background: var(--notice-bg);
+      border: 1px solid var(--notice-border);
+      border-radius: 4px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .notice-icon {
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .notice-text {
+      color: var(--text);
+      line-height: 1.5;
     }
 
     .theme-toggle {
@@ -490,6 +524,7 @@ function generateHtml(data: ResultData): string {
     <button class="theme-toggle" onclick="toggleTheme()">◐</button>
   </header>
 
+  ${mcpNotice}
   ${stepsHtml}
   ${resultWriteHtml}
 

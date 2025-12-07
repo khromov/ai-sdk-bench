@@ -1,20 +1,24 @@
 import {
   Experimental_Agent as Agent,
   hasToolCall,
-  stepCountIs,
   tool,
 } from "ai";
 import { experimental_createMCPClient as createMCPClient } from "./node_modules/@ai-sdk/mcp/dist/index.mjs";
 import { z } from "zod";
 import { writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { generateReport } from "./lib/report.ts";
+import { generateReport, type SingleTestResult, type MultiTestResultData } from "./lib/report.ts";
 import { getModelProvider, loadEnvConfig } from "./lib/providers.ts";
+import { discoverTests, buildAgentPrompt, type TestDefinition } from "./lib/test-discovery.ts";
+import {
+  setupOutputsDirectory,
+  cleanupOutputsDirectory,
+  cleanupTestEnvironment,
+  runTestVerification,
+  type TestVerificationResult,
+} from "./lib/output-test-runner.ts";
 
 /**
  * Generate a timestamped filename
- * @param prefix - The prefix for the filename (e.g., "result")
- * @param extension - The file extension (e.g., "json", "html")
- * @returns Formatted filename like "result-2024-12-07-14-30-45.json"
  */
 function getTimestampedFilename(prefix: string, extension: string): string {
   const now = new Date();
@@ -28,104 +32,246 @@ function getTimestampedFilename(prefix: string, extension: string): string {
   return `${prefix}-${year}-${month}-${day}-${hours}-${minutes}-${seconds}.${extension}`;
 }
 
-// Get MCP server URL from environment (optional)
-const mcpServerUrl = process.env.MCP_SERVER_URL || "";
-const mcpEnabled = mcpServerUrl.trim() !== "";
-
-console.log("=== SvelteBench 2.0 ===");
-console.log(`Model: ${process.env.MODEL}`);
-console.log(`MCP Integration: ${mcpEnabled ? "Enabled" : "Disabled"}`);
-if (mcpEnabled) {
-  console.log(`MCP Server URL: ${mcpServerUrl}`);
-}
-
-// Conditionally create MCP client if URL is provided
-const mcp_client = mcpEnabled
-  ? await createMCPClient({
-      transport: {
-        type: "http",
-        url: mcpServerUrl,
-      },
-    })
-  : null;
-
-// Load environment configuration and get model provider
-const envConfig = loadEnvConfig();
-const model = getModelProvider(envConfig);
-
-// Build tools object with conditional MCP tools
-const tools = {
-  ResultWrite: tool({
-    description: "Write content to a result file",
-    inputSchema: z.object({
-      content: z.string().describe("The content to write to the result file"),
-    }),
-    execute: async ({ content }) => {
-      const contentPreview =
-        content.length > 100 ? content.slice(0, 100) + "..." : content;
-      console.log("[ResultWrite called]", contentPreview);
-      return { success: true };
-    },
-  }),
-  // Only spread MCP tools if MCP client exists
-  ...(mcp_client ? await mcp_client.tools() : {}),
-};
-
-const svelte_agent = new Agent({
-  model,
-  stopWhen: hasToolCall("ResultWrite"),
-  tools,
-});
-
-const result = await svelte_agent.generate({
-  prompt:
-    "Can you build a counter component in svelte? Use the ResultWrite tool to write the result to a file when you are done.",
-});
-
-// Extract ResultWrite content from tool calls
-let resultWriteContent: string | null = null;
-for (const step of result.steps) {
-  for (const content of step.content) {
-    if (content.type === "tool-call" && content.toolName === "ResultWrite") {
-      resultWriteContent = (content.input as { content: string }).content;
-      break;
+/**
+ * Extract ResultWrite content from agent steps
+ */
+function extractResultWriteContent(steps: unknown[]): string | null {
+  for (const step of steps) {
+    const s = step as { content?: Array<{ type: string; toolName?: string; input?: { content: string } }> };
+    if (s.content) {
+      for (const content of s.content) {
+        if (content.type === "tool-call" && content.toolName === "ResultWrite") {
+          return content.input?.content ?? null;
+        }
+      }
     }
   }
-  if (resultWriteContent) break;
+  return null;
 }
 
-// Ensure results directory exists
-const resultsDir = "results";
-if (!existsSync(resultsDir)) {
-  mkdirSync(resultsDir, { recursive: true });
-}
+/**
+ * Run a single test with the AI agent
+ */
+async function runSingleTest(
+  test: TestDefinition,
+  agent: Agent,
+  testIndex: number,
+  totalTests: number
+): Promise<SingleTestResult> {
+  console.log(`\n[${testIndex + 1}/${totalTests}] Running test: ${test.name}`);
+  console.log("─".repeat(50));
 
-// Generate timestamped filenames
-const jsonFilename = getTimestampedFilename("result", "json");
-const htmlFilename = getTimestampedFilename("result", "html");
-const jsonPath = `${resultsDir}/${jsonFilename}`;
-const htmlPath = `${resultsDir}/${htmlFilename}`;
+  const prompt = buildAgentPrompt(test);
 
-// Save result JSON with timestamped filename and MCP metadata
-writeFileSync(
-  jsonPath,
-  JSON.stringify(
-    {
-      ...result,
+  try {
+    // Run the agent
+    console.log("  ⏳ Running agent...");
+    const result = await agent.generate({ prompt });
+
+    // Extract the generated component code
+    const resultWriteContent = extractResultWriteContent(result.steps);
+
+    if (!resultWriteContent) {
+      console.log("  ⚠️  No ResultWrite output found");
+      return {
+        testName: test.name,
+        prompt: test.prompt,
+        steps: result.steps as SingleTestResult["steps"],
+        resultWriteContent: null,
+        verification: null,
+      };
+    }
+
+    console.log("  ✓ Component generated");
+
+    // Run test verification
+    console.log("  ⏳ Verifying against tests...");
+    const verification = await runTestVerification(test, resultWriteContent);
+
+    if (verification.passed) {
+      console.log(`  ✓ All tests passed (${verification.numPassed}/${verification.numTests})`);
+    } else {
+      console.log(`  ✗ Tests failed (${verification.numFailed}/${verification.numTests} failed)`);
+      if (verification.failedTests) {
+        for (const ft of verification.failedTests) {
+          console.log(`    - ${ft.fullName}`);
+        }
+      }
+    }
+
+    // Clean up this test's output directory
+    cleanupTestEnvironment(test.name);
+
+    return {
+      testName: test.name,
+      prompt: test.prompt,
+      steps: result.steps as SingleTestResult["steps"],
       resultWriteContent,
-      metadata: {
-        mcpEnabled,
-        mcpServerUrl: mcpEnabled ? mcpServerUrl : null,
-        timestamp: new Date().toISOString(),
-        model: envConfig.modelString,
+      verification,
+    };
+  } catch (error) {
+    console.error(`  ✗ Error running test: ${error}`);
+    return {
+      testName: test.name,
+      prompt: test.prompt,
+      steps: [],
+      resultWriteContent: null,
+      verification: {
+        testName: test.name,
+        passed: false,
+        numTests: 0,
+        numPassed: 0,
+        numFailed: 0,
+        duration: 0,
+        error: error instanceof Error ? error.message : String(error),
       },
+    };
+  }
+}
+
+// Main execution
+async function main() {
+  // Get MCP server URL from environment (optional)
+  const mcpServerUrl = process.env.MCP_SERVER_URL || "";
+  const mcpEnabled = mcpServerUrl.trim() !== "";
+
+  console.log("╔════════════════════════════════════════════════════╗");
+  console.log("║            SvelteBench 2.0 - Multi-Test            ║");
+  console.log("╚════════════════════════════════════════════════════╝");
+  console.log(`Model: ${process.env.MODEL}`);
+  console.log(`MCP Integration: ${mcpEnabled ? "Enabled" : "Disabled"}`);
+  if (mcpEnabled) {
+    console.log(`MCP Server URL: ${mcpServerUrl}`);
+  }
+
+  // Discover all tests
+  console.log("\n📁 Discovering tests...");
+  const tests = discoverTests();
+  console.log(`Found ${tests.length} test(s): ${tests.map((t) => t.name).join(", ")}`);
+
+  if (tests.length === 0) {
+    console.error("No tests found in tests/ directory");
+    process.exit(1);
+  }
+
+  // Set up outputs directory
+  setupOutputsDirectory();
+
+  // Conditionally create MCP client if URL is provided
+  const mcp_client = mcpEnabled
+    ? await createMCPClient({
+        transport: {
+          type: "http",
+          url: mcpServerUrl,
+        },
+      })
+    : null;
+
+  // Load environment configuration and get model provider
+  const envConfig = loadEnvConfig();
+  const model = getModelProvider(envConfig);
+
+  // Build tools object with conditional MCP tools
+  const tools = {
+    ResultWrite: tool({
+      description: "Write your final Svelte component code. Call this when you have completed implementing the component.",
+      inputSchema: z.object({
+        content: z.string().describe("The complete Svelte component code"),
+      }),
+      execute: async ({ content }) => {
+        const lines = content.split("\n").length;
+        console.log(`    [ResultWrite] Received ${lines} lines of code`);
+        return { success: true };
+      },
+    }),
+    // Only spread MCP tools if MCP client exists
+    ...(mcp_client ? await mcp_client.tools() : {}),
+  };
+
+  // Create the agent
+  const svelte_agent = new Agent({
+    model,
+    stopWhen: hasToolCall("ResultWrite"),
+    tools,
+  });
+
+  // Run all tests
+  const testResults: SingleTestResult[] = [];
+  const startTime = Date.now();
+
+  for (let i = 0; i < tests.length; i++) {
+    const test = tests[i];
+    if (!test) continue;
+    const result = await runSingleTest(test, svelte_agent, i, tests.length);
+    testResults.push(result);
+  }
+
+  const totalDuration = Date.now() - startTime;
+
+  // Clean up outputs directory
+  cleanupOutputsDirectory();
+
+  // Print summary
+  console.log("\n" + "═".repeat(50));
+  console.log("📊 Test Summary");
+  console.log("═".repeat(50));
+
+  const passed = testResults.filter((r) => r.verification?.passed).length;
+  const failed = testResults.filter((r) => r.verification && !r.verification.passed).length;
+  const skipped = testResults.filter((r) => !r.verification).length;
+
+  for (const result of testResults) {
+    const status = result.verification
+      ? result.verification.passed
+        ? "✓"
+        : "✗"
+      : "⊘";
+    const statusText = result.verification
+      ? result.verification.passed
+        ? "PASSED"
+        : "FAILED"
+      : "SKIPPED";
+    console.log(`  ${status} ${result.testName}: ${statusText}`);
+  }
+
+  console.log("─".repeat(50));
+  console.log(`Total: ${passed} passed, ${failed} failed, ${skipped} skipped (${(totalDuration / 1000).toFixed(1)}s)`);
+
+  // Ensure results directory exists
+  const resultsDir = "results";
+  if (!existsSync(resultsDir)) {
+    mkdirSync(resultsDir, { recursive: true });
+  }
+
+  // Generate timestamped filenames
+  const jsonFilename = getTimestampedFilename("result", "json");
+  const htmlFilename = getTimestampedFilename("result", "html");
+  const jsonPath = `${resultsDir}/${jsonFilename}`;
+  const htmlPath = `${resultsDir}/${htmlFilename}`;
+
+  // Build the result data
+  const resultData: MultiTestResultData = {
+    tests: testResults,
+    metadata: {
+      mcpEnabled,
+      mcpServerUrl: mcpEnabled ? mcpServerUrl : null,
+      timestamp: new Date().toISOString(),
+      model: envConfig.modelString,
     },
-    null,
-    2
-  )
-);
+  };
 
-console.log(`✓ Results saved to ${jsonPath}`);
+  // Save result JSON
+  writeFileSync(jsonPath, JSON.stringify(resultData, null, 2));
+  console.log(`\n✓ Results saved to ${jsonPath}`);
 
-// Generate HTML report with timestamped filename
-await generateReport(jsonPath, htmlPath);
+  // Generate HTML report
+  await generateReport(jsonPath, htmlPath);
+
+  // Exit with appropriate code
+  process.exit(failed > 0 ? 1 : 0);
+}
+
+main().catch((error) => {
+  console.error("Fatal error:", error);
+  process.exit(1);
+});

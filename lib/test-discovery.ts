@@ -1,0 +1,78 @@
+import { readdirSync, statSync, existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
+export interface TestDefinition {
+  name: string;
+  directory: string;
+  referenceFile: string;
+  componentFile: string;
+  testFile: string;
+  promptFile: string;
+  prompt: string;
+}
+
+/**
+ * Discover all test suites in the tests/ directory and load their prompts
+ */
+export function discoverTests(): TestDefinition[] {
+  const testsDir = join(process.cwd(), "tests");
+  const definitions: TestDefinition[] = [];
+
+  try {
+    const entries = readdirSync(testsDir);
+
+    for (const entry of entries) {
+      const entryPath = join(testsDir, entry);
+      const stat = statSync(entryPath);
+
+      if (stat.isDirectory()) {
+        const referenceFile = join(entryPath, "Reference.svelte");
+        const testFile = join(entryPath, "test.ts");
+        const promptFile = join(entryPath, "prompt.md");
+        const componentFile = join(entryPath, "Component.svelte");
+
+        // Validate that required files exist
+        if (
+          existsSync(referenceFile) &&
+          existsSync(testFile) &&
+          existsSync(promptFile)
+        ) {
+          // Load the prompt content
+          const prompt = readFileSync(promptFile, "utf-8");
+
+          definitions.push({
+            name: entry,
+            directory: entryPath,
+            referenceFile,
+            componentFile,
+            testFile,
+            promptFile,
+            prompt,
+          });
+        } else {
+          const missing: string[] = [];
+          if (!existsSync(referenceFile)) missing.push("Reference.svelte");
+          if (!existsSync(testFile)) missing.push("test.ts");
+          if (!existsSync(promptFile)) missing.push("prompt.md");
+          console.warn(`⚠️  Skipping ${entry}: missing ${missing.join(", ")}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error discovering tests:", error);
+  }
+
+  // Sort by name for consistent ordering
+  definitions.sort((a, b) => a.name.localeCompare(b.name));
+
+  return definitions;
+}
+
+/**
+ * Build a prompt for the AI agent including the test requirements
+ */
+export function buildAgentPrompt(test: TestDefinition): string {
+  return `${test.prompt}
+
+IMPORTANT: When you have finished implementing the component, use the ResultWrite tool to output your final Svelte component code. Only output the component code itself, no explanations or markdown formatting.`;
+}

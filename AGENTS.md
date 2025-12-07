@@ -1,6 +1,6 @@
 ## Project Overview
 
-AI SDK benchmarking tool built with Vercel AI SDK and Bun runtime. Tests AI agents with MCP (Model Context Protocol) server integration, specifically using the Svelte MCP server for agent benchmarks.
+AI SDK benchmarking tool built with Vercel AI SDK and Bun runtime. Tests AI agents with MCP (Model Context Protocol) server integration, specifically using the Svelte MCP server for agent benchmarks. Automatically discovers and runs all tests in the `tests/` directory and verifies generated components against test suites.
 
 ## Development Commands
 
@@ -8,7 +8,7 @@ AI SDK benchmarking tool built with Vercel AI SDK and Bun runtime. Tests AI agen
 # Install dependencies (runs patch-package automatically)
 bun install
 
-# Run the main benchmark
+# Run the main benchmark (discovers and runs all tests)
 bun run index.ts
 
 # Verify reference implementations against test suites
@@ -31,12 +31,14 @@ bun tsc --noEmit
 The `MODEL` environment variable determines which AI provider to use:
 
 **Anthropic Direct API:**
+
 ```bash
 MODEL=anthropic/claude-haiku-4-5
 MODEL=anthropic/claude-sonnet-4
 ```
 
 **OpenAI Direct API:**
+
 ```bash
 MODEL=openai/gpt-5
 MODEL=openai/gpt-5-mini
@@ -44,6 +46,7 @@ MODEL=openai/gpt-4o
 ```
 
 **OpenRouter (300+ models):**
+
 ```bash
 MODEL=openrouter/anthropic/claude-sonnet-4
 MODEL=openrouter/google/gemini-pro
@@ -66,6 +69,7 @@ MCP_SERVER_URL=https://your-mcp-server.com/mcp
 ```
 
 **Behavior:**
+
 - If `MCP_SERVER_URL` is set and not empty: MCP tools are injected into the agent
 - If `MCP_SERVER_URL` is empty or not set: Agent runs without MCP tools (only built-in tools)
 - MCP status is documented in the result JSON and HTML report with a badge
@@ -79,6 +83,7 @@ MCP_SERVER_URL=https://your-mcp-server.com/mcp
 ### Provider Routing
 
 The benchmark tool automatically routes to the correct provider based on the `MODEL` prefix:
+
 - `anthropic/*` → Direct Anthropic API
 - `openai/*` → Direct OpenAI API
 - `openrouter/*` → OpenRouter unified API
@@ -86,61 +91,6 @@ The benchmark tool automatically routes to the correct provider based on the `MO
 This allows switching models and providers without any code changes.
 
 ## Architecture
-
-### Core Components
-
-- **`index.ts`**: Main benchmark entry point
-
-  - Creates an AI agent using `Experimental_Agent` from Vercel AI SDK
-  - Uses smart provider routing based on `MODEL` environment variable
-  - Conditionally configures MCP client based on `MCP_SERVER_URL` environment variable
-  - Runs agent with a test prompt and captures results
-  - Generates timestamped result files in `results/` directory:
-    - `result-YYYY-MM-DD-HH-MM-SS.json` - Full agent execution trace with metadata
-    - `result-YYYY-MM-DD-HH-MM-SS.html` - HTML visualization report
-  - Automatically opens HTML report in browser
-  - Documents MCP usage in result metadata
-
-- **`lib/providers.ts`**: Smart provider routing
-
-  - Loads environment configuration from `MODEL`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, and `OPENROUTER_API_KEY`
-  - Routes to appropriate provider based on model prefix:
-    - `anthropic/*` → Direct Anthropic API
-    - `openai/*` → Direct OpenAI API
-    - `openrouter/*` → OpenRouter unified API
-  - Validates required API keys and provides clear error messages
-  - Returns configured language model instance
-
-- **`lib/report.ts`**: HTML report generation
-
-  - Parses result JSON files containing agent execution steps and metadata
-  - Renders detailed HTML visualization with:
-    - User prompts and assistant responses
-    - Tool calls and their inputs/outputs
-    - Token usage statistics per step
-    - Timestamps and metadata
-    - MCP status badge (enabled/disabled with server URL)
-  - Auto-opens report in default browser using `Bun.spawn(["open", ...])`
-
-- **`generate-report.ts`**: Standalone report generator
-  - Regenerates HTML reports from existing result JSON files
-  - Can specify a specific result file or automatically uses the most recent one
-  - Usage: `bun run generate-report.ts [path/to/result.json]`
-
-- **`lib/verify-references.ts`**: Test verification system
-  - Discovers test suites in `tests/*/` directories
-  - For each test suite:
-    - Copies `Reference.svelte` → `Component.svelte`
-    - Runs vitest tests via CLI with JSON reporter
-    - Parses test results and collects failure details
-    - Cleans up `Component.svelte` after testing
-  - Provides detailed failure information including test names and error messages
-  - Generates summary report with pass/fail statistics
-  - Returns exit code 0 if all tests pass, 1 if any fail
-
-- **`verify-references.ts`**: Test verification entry point
-  - Entry point for verifying reference Svelte implementations
-  - Usage: `bun run verify-tests`
 
 ### Test Suite Structure
 
@@ -154,16 +104,23 @@ tests/
     prompt.md        - Prompt for AI agents to implement the component
 ```
 
-**Test Workflow:**
-1. AI agents read the `prompt.md` to understand requirements
-2. Agents generate `Component.svelte` based on the prompt
-3. Tests in `test.ts` verify the generated component works correctly
-4. Reference implementations in `Reference.svelte` serve as:
-   - Known-good implementations for verification
-   - Examples of correct solutions
-   - Validation that tests themselves are correct
+**Benchmark Workflow:**
 
-**Test Verification:**
+1. `index.ts` discovers all test suites in `tests/`
+2. For each test:
+   - Loads `prompt.md` and builds agent prompt
+   - Agent generates component code based on the prompt
+   - Agent calls `ResultWrite` tool with the component code
+   - Component is written to `outputs/{test-name}/Component.svelte`
+   - Test file is copied to `outputs/{test-name}/test.ts`
+   - Vitest runs tests against the generated component
+   - Results are collected (pass/fail, error messages)
+   - Output directory is cleaned up
+3. All results are saved to a timestamped JSON file
+4. HTML report is generated with expandable sections for each test
+
+**Reference Verification:**
+
 - Run `bun run verify-tests` to validate reference implementations
 - Each test file imports `Component.svelte` (not Reference.svelte directly)
 - Verification system temporarily copies Reference.svelte → Component.svelte
@@ -193,30 +150,49 @@ The project uses `@ai-sdk/mcp` with a custom patch applied via `patch-package`:
 
 ### Data Flow
 
-1. Agent receives prompt with access to tools (built-in + optional MCP tools)
-2. Agent iterates through steps, calling tools as needed
-3. Each step is tracked with full request/response details
-4. Agent stops when `ResultWrite` tool is called
-5. Results written to `results/result-YYYY-MM-DD-HH-MM-SS.json` with metadata:
-   - `mcpEnabled`: boolean indicating if MCP was used
-   - `mcpServerUrl`: URL of MCP server (or null if disabled)
-   - `timestamp`: ISO timestamp of when the benchmark was run
-   - `model`: Model identifier used for the benchmark
-6. HTML report generated at `results/result-YYYY-MM-DD-HH-MM-SS.html`
-7. Report automatically opens in default browser
+1. Test discovery scans `tests/` directory for valid test suites
+2. For each test:
+   a. Agent receives prompt with access to tools (built-in + optional MCP tools)
+   b. Agent iterates through steps, calling tools as needed
+   c. Agent stops when `ResultWrite` tool is called with component code
+   d. Component is written to `outputs/{test-name}/Component.svelte`
+   e. Vitest runs test file against the generated component
+   f. Test results are collected (pass/fail, error details)
+   g. Output directory is cleaned up
+3. All results aggregated into multi-test result object
+4. Results written to `results/result-YYYY-MM-DD-HH-MM-SS.json` with metadata
+5. HTML report generated at `results/result-YYYY-MM-DD-HH-MM-SS.html`
+6. Report automatically opens in default browser
 
 ### Output Files
 
 All results are saved in the `results/` directory with timestamped filenames:
 
-- **JSON files**: `result-2024-12-07-14-30-45.json` - Complete execution trace with all agent steps, tool calls, and metadata
-- **HTML files**: `result-2024-12-07-14-30-45.html` - Interactive visualization of the benchmark run
+- **JSON files**: `result-2024-12-07-14-30-45.json` - Complete execution trace with all test results
+- **HTML files**: `result-2024-12-07-14-30-45.html` - Interactive visualization with expandable test sections
 
-**Result JSON Structure:**
+**Multi-Test Result JSON Structure:**
+
 ```json
 {
-  "steps": [...],
-  "resultWriteContent": "...",
+  "tests": [
+    {
+      "testName": "counter",
+      "prompt": "# Counter Component Task...",
+      "steps": [...],
+      "resultWriteContent": "<script>...</script>...",
+      "verification": {
+        "testName": "counter",
+        "passed": true,
+        "numTests": 4,
+        "numPassed": 4,
+        "numFailed": 0,
+        "duration": 150,
+        "failedTests": []
+      }
+    },
+    ...
+  ],
   "metadata": {
     "mcpEnabled": true,
     "mcpServerUrl": "https://mcp.svelte.dev/mcp",
@@ -227,10 +203,12 @@ All results are saved in the `results/` directory with timestamped filenames:
 ```
 
 This naming convention allows you to:
+
 - Run multiple benchmarks without overwriting previous results
 - Easily identify when each benchmark was run
 - Compare results across different runs
 - Track whether MCP was enabled for each run
+- See per-test verification status
 
 ## TypeScript Configuration
 
@@ -247,8 +225,11 @@ This naming convention allows you to:
 
 - The MCP client import uses a direct path to the patched module: `./node_modules/@ai-sdk/mcp/dist/index.mjs`
 - Agent stops execution when the `ResultWrite` tool is called (configured via `stopWhen` option)
-- HTML reports include collapsible tool input sections for better readability
+- The `outputs/` directory is used temporarily for test verification and is cleaned up after each test
+- HTML reports include expandable sections for each test with full step details
+- Test verification results show pass/fail status and failed test details
 - Token usage includes cached token counts when available
 - All result files are saved with timestamps to preserve historical benchmarks
 - MCP integration can be toggled via `MCP_SERVER_URL` environment variable without code changes
 - MCP status is clearly indicated in both the JSON metadata and HTML report with a visual badge
+- Exit code is 0 if all tests pass, 1 if any tests fail

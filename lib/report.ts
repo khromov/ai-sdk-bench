@@ -1,4 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
+import type { TestVerificationResult } from "./output-test-runner.ts";
+import { generateMultiTestHtml } from "./report-template.ts";
 
 // Type definitions for result.json structure
 interface TextBlock {
@@ -71,494 +73,72 @@ interface Metadata {
   model: string;
 }
 
-interface ResultData {
+// Single test result within a multi-test run
+export interface SingleTestResult {
+  testName: string;
+  prompt: string;
+  steps: Step[];
+  resultWriteContent: string | null;
+  verification: TestVerificationResult | null;
+}
+
+// Multi-test result data structure
+export interface MultiTestResultData {
+  tests: SingleTestResult[];
+  metadata: Metadata;
+}
+
+// Legacy single-test result data structure (for backward compatibility)
+interface LegacyResultData {
   steps: Step[];
   resultWriteContent?: string | null;
   metadata?: Metadata;
 }
 
 /**
- * Calculate summary statistics from result data
- */
-function calculateSummary(data: ResultData): {
-  totalTokens: number;
-  outputTokens: number;
-  stepCount: number;
-  model: string;
-  timestamp: string;
-  mcpEnabled: boolean;
-  mcpServerUrl: string | null;
-} {
-  const totalTokens = data.steps.reduce(
-    (sum, step) => sum + step.usage.totalTokens,
-    0
-  );
-  const outputTokens = data.steps.reduce(
-    (sum, step) => sum + step.usage.outputTokens,
-    0
-  );
-  const stepCount = data.steps.length;
-  const model = data.metadata?.model || data.steps[0]?.response.modelId || "unknown";
-  const timestamp = data.metadata?.timestamp || data.steps[0]?.response.timestamp
-    ? formatTimestamp(data.metadata?.timestamp || data.steps[0].response.timestamp)
-    : "";
-  const mcpEnabled = data.metadata?.mcpEnabled ?? false;
-  const mcpServerUrl = data.metadata?.mcpServerUrl ?? null;
-
-  return { totalTokens, outputTokens, stepCount, model, timestamp, mcpEnabled, mcpServerUrl };
-}
-
-/**
- * Escape HTML special characters
- */
-function escapeHtml(text: string): string {
-  const map: Record<string, string> = {
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;",
-  };
-  let result = "";
-  for (const char of text) {
-    result += map[char] ?? char;
-  }
-  return result;
-}
-
-/**
- * Format timestamp to readable date
- */
-function formatTimestamp(timestamp: string): string {
-  const date = new Date(timestamp);
-  return date.toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
-
-/**
- * Render a single content block based on its type
- */
-function renderContentBlock(block: ContentBlock): string {
-  if (block.type === "text") {
-    return `<div class="text">${escapeHtml(block.text)}</div>`;
-  } else if (block.type === "tool-call") {
-    const inputJson = JSON.stringify(block.input, null, 2);
-    return `<details class="tool">
-  <summary><span class="arrow">→</span> <span class="tool-name">${escapeHtml(block.toolName)}</span></summary>
-  <pre class="input">${escapeHtml(inputJson)}</pre>
-</details>`;
-  } else if (block.type === "tool-result") {
-    const outputText = block.output?.content
-      ? block.output.content
-          .map((c) => c.text || JSON.stringify(c))
-          .join("\n")
-      : "No output";
-    const isError = block.output?.isError || false;
-    const statusIcon = isError ? "✗" : "✓";
-    return `<details class="result ${isError ? "error" : ""}">
-  <summary><span class="status ${isError ? "error" : "success"}">${statusIcon}</span> Output</summary>
-  <pre class="output">${escapeHtml(outputText)}</pre>
-</details>`;
-  }
-  return "";
-}
-
-/**
- * Generate HTML report from result data
- */
-function generateHtml(data: ResultData): string {
-  const summary = calculateSummary(data);
-
-  const mcpBadge = summary.mcpEnabled
-    ? `<span class="mcp-badge enabled">MCP: ${escapeHtml(summary.mcpServerUrl || '')}</span>`
-    : `<span class="mcp-badge disabled">MCP ✗</span>`;
-
-  const mcpNotice = !summary.mcpEnabled
-    ? `
-  <div class="mcp-notice">
-    <span class="notice-icon">ℹ️</span>
-    <span class="notice-text">MCP integration was not used in this benchmark. The agent ran with built-in tools only.</span>
-  </div>`
-    : "";
-
-  const stepsHtml = data.steps
-    .map((step, index) => {
-      const assistantContentHtml =
-        step.content.map((block) => renderContentBlock(block)).join("") ||
-        '<div class="text">No response</div>';
-
-      const cachedInfo =
-        step.usage.cachedInputTokens > 0
-          ? `, ${step.usage.cachedInputTokens.toLocaleString()}⚡`
-          : "";
-
-      const inputTokens = step.usage.inputTokens;
-      const cachedTokens = step.usage.cachedInputTokens;
-      const uncachedInputTokens = inputTokens - cachedTokens;
-
-      return `
-    <details class="step">
-      <summary class="step-header">
-        <span class="step-num">Step ${index + 1}</span>
-        <span class="line"></span>
-        <span class="tokens" title="Total tokens: ${step.usage.totalTokens.toLocaleString()}&#10;Input: ${inputTokens.toLocaleString()} (${uncachedInputTokens.toLocaleString()} new + ${cachedTokens.toLocaleString()} cached)&#10;Output: ${step.usage.outputTokens.toLocaleString()}">${step.usage.totalTokens.toLocaleString()} tok</span>
-        <span class="output" title="Output tokens generated: ${step.usage.outputTokens.toLocaleString()}&#10;${cachedTokens > 0 ? `Cached input tokens (⚡): ${cachedTokens.toLocaleString()} (not billed)` : 'No cached tokens'}">(${step.usage.outputTokens.toLocaleString()}↑${cachedInfo})</span>
-        <span class="reason">${step.finishReason}</span>
-      </summary>
-      <div class="step-content">
-        ${assistantContentHtml}
-      </div>
-    </details>`;
-    })
-    .join("\n");
-
-  const resultWriteHtml = data.resultWriteContent
-    ? `
-    <section class="result-write">
-      <h2>Output</h2>
-      <pre class="code">${escapeHtml(data.resultWriteContent)}</pre>
-    </section>`
-    : "";
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SvelteBench 2.0</title>
-  <style>
-    :root {
-      --bg: #f8f8f8;
-      --surface: #ffffff;
-      --text: #24292e;
-      --text-muted: #6a737d;
-      --border: #e1e4e8;
-      --success: #238636;
-      --error: #cf222e;
-      --tool: #8250df;
-      --mcp-enabled: #0969da;
-      --mcp-disabled: #6a737d;
-      --notice-bg: #ddf4ff;
-      --notice-border: #54aeff;
-    }
-
-    [data-theme="dark"] {
-      --bg: #0d1117;
-      --surface: #161b22;
-      --text: #e6edf3;
-      --text-muted: #8b949e;
-      --border: #30363d;
-      --success: #3fb950;
-      --error: #f85149;
-      --tool: #a371f7;
-      --mcp-enabled: #58a6ff;
-      --mcp-disabled: #8b949e;
-      --notice-bg: #1c2d41;
-      --notice-border: #388bfd;
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    html {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'JetBrains Mono', 'SF Mono', 'Monaco', 'Menlo', monospace;
-      font-size: 13px;
-      line-height: 1.4;
-    }
-
-    body {
-      padding: 12px;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    header {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 12px;
-      margin-bottom: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    h1 {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 4px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .meta {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    .mcp-badge {
-      font-size: 11px;
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-weight: 500;
-      white-space: nowrap;
-    }
-
-    .mcp-badge.enabled {
-      background: var(--mcp-enabled);
-      color: white;
-    }
-
-    .mcp-badge.disabled {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-    }
-
-    .mcp-notice {
-      background: var(--notice-bg);
-      border: 1px solid var(--notice-border);
-      border-radius: 4px;
-      padding: 10px 12px;
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-    }
-
-    .notice-icon {
-      font-size: 16px;
-      flex-shrink: 0;
-    }
-
-    .notice-text {
-      color: var(--text);
-      line-height: 1.5;
-    }
-
-    .theme-toggle {
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 3px;
-      color: var(--text);
-      cursor: pointer;
-      padding: 4px 8px;
-      font-size: 16px;
-    }
-
-    .theme-toggle:hover {
-      background: var(--border);
-    }
-
-    .step {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      margin-bottom: 8px;
-    }
-
-    .step-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      cursor: pointer;
-      user-select: none;
-      list-style: none;
-    }
-
-    .step-header::-webkit-details-marker {
-      display: none;
-    }
-
-    .step-header:hover {
-      background: var(--bg);
-    }
-
-    .step-num {
-      font-weight: 600;
-    }
-
-    .line {
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
-
-    .tokens {
-      color: var(--text-muted);
-      cursor: help;
-      border-bottom: 1px dotted var(--text-muted);
-    }
-
-    .output {
-      color: var(--text);
-      cursor: help;
-      border-bottom: 1px dotted var(--text-muted);
-    }
-
-    .reason {
-      color: var(--text-muted);
-      font-size: 12px;
-    }
-
-    .step-content {
-      padding: 12px;
-      border-top: 1px solid var(--border);
-    }
-
-    .text {
-      white-space: pre-wrap;
-      margin-bottom: 8px;
-      padding-left: 8px;
-      border-left: 2px solid var(--border);
-    }
-
-    .tool,
-    .result {
-      margin: 8px 0;
-      border: 1px solid var(--border);
-      border-radius: 3px;
-    }
-
-    .tool summary,
-    .result summary {
-      padding: 4px 8px;
-      cursor: pointer;
-      user-select: none;
-      list-style: none;
-    }
-
-    .tool summary::-webkit-details-marker,
-    .result summary::-webkit-details-marker {
-      display: none;
-    }
-
-    .tool summary:hover,
-    .result summary:hover {
-      background: var(--bg);
-    }
-
-    .arrow {
-      color: var(--tool);
-    }
-
-    .tool-name {
-      font-weight: 600;
-    }
-
-    .status {
-      font-weight: 600;
-    }
-
-    .status.success {
-      color: var(--success);
-    }
-
-    .status.error {
-      color: var(--error);
-    }
-
-    .result.error {
-      border-color: var(--error);
-    }
-
-    .input,
-    .output {
-      padding: 8px;
-      background: var(--bg);
-      border-top: 1px solid var(--border);
-      overflow-x: auto;
-      font-size: 12px;
-    }
-
-    .result-write {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 12px;
-    }
-
-    .result-write h2 {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-
-    .code {
-      padding: 8px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 3px;
-      overflow-x: auto;
-      font-size: 12px;
-      white-space: pre-wrap;
-    }
-
-    @media (max-width: 768px) {
-      body {
-        padding: 8px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <header>
-    <div>
-      <h1>SvelteBench 2.0 ${mcpBadge}</h1>
-      <div class="meta">${summary.model} · ${summary.stepCount} steps · ${summary.totalTokens.toLocaleString()} tokens · ${summary.timestamp}</div>
-    </div>
-    <button class="theme-toggle" onclick="toggleTheme()">◐</button>
-  </header>
-
-  ${mcpNotice}
-  ${stepsHtml}
-  ${resultWriteHtml}
-
-  <script>
-    function toggleTheme() {
-      const html = document.documentElement;
-      const current = html.dataset.theme || 'light';
-      const next = current === 'light' ? 'dark' : 'light';
-      html.dataset.theme = next;
-      localStorage.setItem('theme', next);
-    }
-
-    document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light';
-  </script>
-</body>
-</html>`;
-}
-
-/**
  * Generate HTML report from result.json file
+ * Supports both legacy single-test and new multi-test formats
  * @param resultPath - Path to the result.json file
  * @param outputPath - Path where the HTML report will be saved
+ * @param openBrowser - Whether to open the report in the default browser (default: true)
  */
 export async function generateReport(
   resultPath: string,
-  outputPath: string
+  outputPath: string,
+  openBrowser = true,
 ): Promise<void> {
   try {
     // Read and parse the result.json file
     const jsonContent = await readFile(resultPath, "utf-8");
-    const data: ResultData = JSON.parse(jsonContent);
+    const data = JSON.parse(jsonContent);
 
-    // Generate HTML
-    const html = generateHtml(data);
+    let html: string;
+
+    // Check if it's the new multi-test format
+    if ("tests" in data && Array.isArray(data.tests)) {
+      html = generateMultiTestHtml(data as MultiTestResultData);
+    } else {
+      // Legacy format - convert to multi-test format for consistent rendering
+      const legacyData = data as LegacyResultData;
+      const multiTestData: MultiTestResultData = {
+        tests: [
+          {
+            testName: "Legacy Test",
+            prompt: "Static prompt (legacy format)",
+            steps: legacyData.steps,
+            resultWriteContent: legacyData.resultWriteContent ?? null,
+            verification: null,
+          },
+        ],
+        metadata: legacyData.metadata ?? {
+          mcpEnabled: false,
+          mcpServerUrl: null,
+          timestamp: new Date().toISOString(),
+          model: "unknown",
+        },
+      };
+      html = generateMultiTestHtml(multiTestData);
+    }
 
     // Write the HTML file
     await writeFile(outputPath, html, "utf-8");
@@ -566,7 +146,9 @@ export async function generateReport(
     console.log(`✓ Report generated successfully: ${outputPath}`);
 
     // Open the report in the default browser
-    Bun.spawn(["open", outputPath]);
+    if (openBrowser) {
+      Bun.spawn(["open", outputPath]);
+    }
   } catch (error) {
     console.error("Error generating report:", error);
     throw error;

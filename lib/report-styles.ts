@@ -272,6 +272,54 @@ export function getReportStyles(): string {
       margin-bottom: 16px;
     }
 
+    .token-summary {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 12px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .token-summary h4 {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .token-count {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .component-preview {
+      position: relative;
+    }
+
+    .expand-button {
+      display: block;
+      width: 100%;
+      padding: 8px;
+      margin-top: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s;
+    }
+
+    .expand-button:hover {
+      background: var(--border);
+    }
+
     .verification-section {
       margin-top: 16px;
     }
@@ -407,8 +455,12 @@ export function getReportStyles(): string {
       overflow-x: auto;
       font-size: 12px;
       white-space: pre-wrap;
-      max-height: 400px;
-      overflow-y: auto;
+    }
+
+    .code-preview,
+    .code-full {
+      max-height: none;
+      overflow-y: visible;
     }
 
     /* Verification Styles */

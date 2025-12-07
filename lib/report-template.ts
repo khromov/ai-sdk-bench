@@ -76,6 +76,14 @@ function formatTimestamp(timestamp: string): string {
 }
 
 /**
+ * Get first N lines of code
+ */
+function getFirstLines(code: string, numLines: number): string {
+  const lines = code.split("\n");
+  return lines.slice(0, numLines).join("\n");
+}
+
+/**
  * Render a single content block based on its type
  */
 function renderContentBlock(block: ContentBlock): string {
@@ -209,10 +217,24 @@ function renderTestSection(test: SingleTestResult, index: number): string {
   const stepsHtml = renderSteps(test.steps);
   const verificationHtml = renderVerificationResult(test.verification);
 
+  // Generate unique ID for this test's component code
+  const componentId = `component-${test.testName.replace(/[^a-zA-Z0-9]/g, "-")}`;
+  
   const resultWriteHtml = test.resultWriteContent
     ? `<div class="output-section">
+        <div class="token-summary">
+          <h4>Total Tokens Used</h4>
+          <div class="token-count">${totalTokens.toLocaleString()} tokens</div>
+        </div>
         <h4>Generated Component</h4>
-        <pre class="code">${escapeHtml(test.resultWriteContent)}</pre>
+        <div class="component-preview">
+          <pre class="code code-preview" id="${componentId}-preview">${escapeHtml(getFirstLines(test.resultWriteContent, 5))}</pre>
+          <pre class="code code-full" id="${componentId}-full" style="display: none;">${escapeHtml(test.resultWriteContent)}</pre>
+          <button class="expand-button" onclick="toggleComponentCode('${componentId}')">
+            <span class="expand-text">Show full code</span>
+            <span class="collapse-text" style="display: none;">Show less</span>
+          </button>
+        </div>
       </div>`
     : "";
 
@@ -322,6 +344,28 @@ export function generateMultiTestHtml(data: MultiTestResultData): string {
       const next = current === 'light' ? 'dark' : 'light';
       html.dataset.theme = next;
       localStorage.setItem('theme', next);
+    }
+
+    function toggleComponentCode(id) {
+      const preview = document.getElementById(id + '-preview');
+      const full = document.getElementById(id + '-full');
+      const button = event.target.closest('button');
+      const expandText = button.querySelector('.expand-text');
+      const collapseText = button.querySelector('.collapse-text');
+      
+      if (preview.style.display === 'none') {
+        // Show preview
+        preview.style.display = 'block';
+        full.style.display = 'none';
+        expandText.style.display = 'inline';
+        collapseText.style.display = 'none';
+      } else {
+        // Show full
+        preview.style.display = 'none';
+        full.style.display = 'block';
+        expandText.style.display = 'none';
+        collapseText.style.display = 'inline';
+      }
     }
 
     document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light';

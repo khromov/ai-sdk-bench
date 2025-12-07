@@ -64,9 +64,17 @@ interface Step {
   [key: string]: unknown;
 }
 
+interface Metadata {
+  mcpEnabled: boolean;
+  mcpServerUrl: string | null;
+  timestamp: string;
+  model: string;
+}
+
 interface ResultData {
   steps: Step[];
   resultWriteContent?: string | null;
+  metadata?: Metadata;
 }
 
 /**
@@ -78,6 +86,8 @@ function calculateSummary(data: ResultData): {
   stepCount: number;
   model: string;
   timestamp: string;
+  mcpEnabled: boolean;
+  mcpServerUrl: string | null;
 } {
   const totalTokens = data.steps.reduce(
     (sum, step) => sum + step.usage.totalTokens,
@@ -88,12 +98,14 @@ function calculateSummary(data: ResultData): {
     0
   );
   const stepCount = data.steps.length;
-  const model = data.steps[0]?.response.modelId || "unknown";
-  const timestamp = data.steps[0]?.response.timestamp
-    ? formatTimestamp(data.steps[0].response.timestamp)
+  const model = data.metadata?.model || data.steps[0]?.response.modelId || "unknown";
+  const timestamp = data.metadata?.timestamp || data.steps[0]?.response.timestamp
+    ? formatTimestamp(data.metadata?.timestamp || data.steps[0].response.timestamp)
     : "";
+  const mcpEnabled = data.metadata?.mcpEnabled ?? false;
+  const mcpServerUrl = data.metadata?.mcpServerUrl ?? null;
 
-  return { totalTokens, outputTokens, stepCount, model, timestamp };
+  return { totalTokens, outputTokens, stepCount, model, timestamp, mcpEnabled, mcpServerUrl };
 }
 
 /**
@@ -163,6 +175,10 @@ function renderContentBlock(block: ContentBlock): string {
 function generateHtml(data: ResultData): string {
   const summary = calculateSummary(data);
 
+  const mcpBadge = summary.mcpEnabled
+    ? `<span class="mcp-badge enabled" title="MCP Server: ${escapeHtml(summary.mcpServerUrl || '')}">MCP ✓</span>`
+    : `<span class="mcp-badge disabled">MCP ✗</span>`;
+
   const stepsHtml = data.steps
     .map((step, index) => {
       const assistantContentHtml =
@@ -218,6 +234,8 @@ function generateHtml(data: ResultData): string {
       --success: #238636;
       --error: #cf222e;
       --tool: #8250df;
+      --mcp-enabled: #0969da;
+      --mcp-disabled: #6a737d;
     }
 
     [data-theme="dark"] {
@@ -229,6 +247,8 @@ function generateHtml(data: ResultData): string {
       --success: #3fb950;
       --error: #f85149;
       --tool: #a371f7;
+      --mcp-enabled: #58a6ff;
+      --mcp-disabled: #8b949e;
     }
 
     * {
@@ -266,10 +286,32 @@ function generateHtml(data: ResultData): string {
       font-size: 16px;
       font-weight: 600;
       margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .meta {
       font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .mcp-badge {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: 500;
+    }
+
+    .mcp-badge.enabled {
+      background: var(--mcp-enabled);
+      color: white;
+      cursor: help;
+    }
+
+    .mcp-badge.disabled {
+      background: var(--bg);
+      border: 1px solid var(--border);
       color: var(--text-muted);
     }
 
@@ -442,7 +484,7 @@ function generateHtml(data: ResultData): string {
 <body>
   <header>
     <div>
-      <h1>SvelteBench 2.0</h1>
+      <h1>SvelteBench 2.0 ${mcpBadge}</h1>
       <div class="meta">${summary.model} · ${summary.stepCount} steps · ${summary.totalTokens.toLocaleString()} tokens · ${summary.timestamp}</div>
     </div>
     <button class="theme-toggle" onclick="toggleTheme()">◐</button>

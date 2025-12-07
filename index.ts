@@ -28,34 +28,49 @@ function getTimestampedFilename(prefix: string, extension: string): string {
   return `${prefix}-${year}-${month}-${day}-${hours}-${minutes}-${seconds}.${extension}`;
 }
 
-const mcp_client = await createMCPClient({
-  transport: {
-    type: "http",
-    url: "https://mcp.svelte.dev/mcp",
-  },
-});
+// Get MCP server URL from environment (optional)
+const mcpServerUrl = process.env.MCP_SERVER_URL || "";
+const mcpEnabled = mcpServerUrl.trim() !== "";
+
+console.log(`MCP Integration: ${mcpEnabled ? "Enabled" : "Disabled"}`);
+if (mcpEnabled) {
+  console.log(`MCP Server URL: ${mcpServerUrl}`);
+}
+
+// Conditionally create MCP client if URL is provided
+const mcp_client = mcpEnabled
+  ? await createMCPClient({
+      transport: {
+        type: "http",
+        url: mcpServerUrl,
+      },
+    })
+  : null;
 
 // Load environment configuration and get model provider
 const envConfig = loadEnvConfig();
 const model = getModelProvider(envConfig);
 
+// Build tools object with conditional MCP tools
+const tools = {
+  ResultWrite: tool({
+    description: "Write content to a result file",
+    inputSchema: z.object({
+      content: z.string().describe("The content to write to the result file"),
+    }),
+    execute: async ({ content }) => {
+      console.log("[ResultWrite called]", content);
+      return { success: true };
+    },
+  }),
+  // Only spread MCP tools if MCP client exists
+  ...(mcp_client ? await mcp_client.tools() : {}),
+};
+
 const svelte_agent = new Agent({
   model,
-
   stopWhen: hasToolCall("ResultWrite"),
-  tools: {
-    ResultWrite: tool({
-      description: "Write content to a result file",
-      inputSchema: z.object({
-        content: z.string().describe("The content to write to the result file"),
-      }),
-      execute: async ({ content }) => {
-        console.log("[ResultWrite called]", content);
-        return { success: true };
-      },
-    }),
-    ...(await mcp_client.tools()),
-  },
+  tools,
 });
 
 const result = await svelte_agent.generate({
@@ -87,10 +102,23 @@ const htmlFilename = getTimestampedFilename("result", "html");
 const jsonPath = `${resultsDir}/${jsonFilename}`;
 const htmlPath = `${resultsDir}/${htmlFilename}`;
 
-// Save result JSON with timestamped filename
+// Save result JSON with timestamped filename and MCP metadata
 writeFileSync(
   jsonPath,
-  JSON.stringify({ ...result, resultWriteContent }, null, 2)
+  JSON.stringify(
+    {
+      ...result,
+      resultWriteContent,
+      metadata: {
+        mcpEnabled,
+        mcpServerUrl: mcpEnabled ? mcpServerUrl : null,
+        timestamp: new Date().toISOString(),
+        model: envConfig.modelString,
+      },
+    },
+    null,
+    2
+  )
 );
 
 console.log(`✓ Results saved to ${jsonPath}`);

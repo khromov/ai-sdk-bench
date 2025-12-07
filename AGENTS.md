@@ -47,6 +47,26 @@ MODEL=openrouter/google/gemini-pro
 MODEL=openrouter/meta-llama/llama-3.1-405b-instruct
 ```
 
+### MCP Server Configuration
+
+The `MCP_SERVER_URL` environment variable controls MCP (Model Context Protocol) integration:
+
+```bash
+# Enable MCP with Svelte server (default for this benchmark)
+MCP_SERVER_URL=https://mcp.svelte.dev/mcp
+
+# Disable MCP integration (run without external tools)
+MCP_SERVER_URL=
+
+# Use a different MCP server
+MCP_SERVER_URL=https://your-mcp-server.com/mcp
+```
+
+**Behavior:**
+- If `MCP_SERVER_URL` is set and not empty: MCP tools are injected into the agent
+- If `MCP_SERVER_URL` is empty or not set: Agent runs without MCP tools (only built-in tools)
+- MCP status is documented in the result JSON and HTML report with a badge
+
 ### Required API Keys
 
 - `ANTHROPIC_API_KEY`: Required when using `anthropic/*` models
@@ -70,12 +90,13 @@ This allows switching models and providers without any code changes.
 
   - Creates an AI agent using `Experimental_Agent` from Vercel AI SDK
   - Uses smart provider routing based on `MODEL` environment variable
-  - Configures MCP client to connect to Svelte MCP server at `https://mcp.svelte.dev/mcp`
+  - Conditionally configures MCP client based on `MCP_SERVER_URL` environment variable
   - Runs agent with a test prompt and captures results
   - Generates timestamped result files in `results/` directory:
-    - `result-YYYY-MM-DD-HH-MM-SS.json` - Full agent execution trace
+    - `result-YYYY-MM-DD-HH-MM-SS.json` - Full agent execution trace with metadata
     - `result-YYYY-MM-DD-HH-MM-SS.html` - HTML visualization report
   - Automatically opens HTML report in browser
+  - Documents MCP usage in result metadata
 
 - **`lib/providers.ts`**: Smart provider routing
 
@@ -89,12 +110,13 @@ This allows switching models and providers without any code changes.
 
 - **`lib/report.ts`**: HTML report generation
 
-  - Parses result JSON files containing agent execution steps
+  - Parses result JSON files containing agent execution steps and metadata
   - Renders detailed HTML visualization with:
     - User prompts and assistant responses
     - Tool calls and their inputs/outputs
     - Token usage statistics per step
     - Timestamps and metadata
+    - MCP status badge (enabled/disabled with server URL)
   - Auto-opens report in default browser using `Bun.spawn(["open", ...])`
 
 - **`generate-report.ts`**: Standalone report generator
@@ -117,15 +139,21 @@ The project uses `@ai-sdk/mcp` with a custom patch applied via `patch-package`:
 
 - Patch location: `patches/@ai-sdk+mcp+0.0.11.patch`
 - Fixes: Handles missing event types in HTTP SSE responses by treating undefined events as "message" events
-- MCP server: Svelte documentation server providing Svelte-related tools
+- MCP server: Configurable via `MCP_SERVER_URL` environment variable
+- Default server: Svelte documentation server (`https://mcp.svelte.dev/mcp`)
+- Can be disabled by leaving `MCP_SERVER_URL` empty
 
 ### Data Flow
 
-1. Agent receives prompt with access to MCP tools
+1. Agent receives prompt with access to tools (built-in + optional MCP tools)
 2. Agent iterates through steps, calling tools as needed
 3. Each step is tracked with full request/response details
 4. Agent stops when `ResultWrite` tool is called
-5. Results written to `results/result-YYYY-MM-DD-HH-MM-SS.json`
+5. Results written to `results/result-YYYY-MM-DD-HH-MM-SS.json` with metadata:
+   - `mcpEnabled`: boolean indicating if MCP was used
+   - `mcpServerUrl`: URL of MCP server (or null if disabled)
+   - `timestamp`: ISO timestamp of when the benchmark was run
+   - `model`: Model identifier used for the benchmark
 6. HTML report generated at `results/result-YYYY-MM-DD-HH-MM-SS.html`
 7. Report automatically opens in default browser
 
@@ -136,10 +164,25 @@ All results are saved in the `results/` directory with timestamped filenames:
 - **JSON files**: `result-2024-12-07-14-30-45.json` - Complete execution trace with all agent steps, tool calls, and metadata
 - **HTML files**: `result-2024-12-07-14-30-45.html` - Interactive visualization of the benchmark run
 
+**Result JSON Structure:**
+```json
+{
+  "steps": [...],
+  "resultWriteContent": "...",
+  "metadata": {
+    "mcpEnabled": true,
+    "mcpServerUrl": "https://mcp.svelte.dev/mcp",
+    "timestamp": "2024-12-07T14:30:45.123Z",
+    "model": "anthropic/claude-sonnet-4"
+  }
+}
+```
+
 This naming convention allows you to:
 - Run multiple benchmarks without overwriting previous results
 - Easily identify when each benchmark was run
 - Compare results across different runs
+- Track whether MCP was enabled for each run
 
 ## TypeScript Configuration
 
@@ -159,3 +202,5 @@ This naming convention allows you to:
 - HTML reports include collapsible tool input sections for better readability
 - Token usage includes cached token counts when available
 - All result files are saved with timestamps to preserve historical benchmarks
+- MCP integration can be toggled via `MCP_SERVER_URL` environment variable without code changes
+- MCP status is clearly indicated in both the JSON metadata and HTML report with a visual badge

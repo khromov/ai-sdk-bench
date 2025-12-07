@@ -54,7 +54,7 @@ export function cleanupOutputsDirectory(): void {
  */
 export function prepareTestEnvironment(
   test: TestDefinition,
-  componentCode: string
+  componentCode: string,
 ): string {
   const testDir = join(OUTPUTS_DIR, test.name);
 
@@ -90,7 +90,7 @@ export function cleanupTestEnvironment(testName: string): void {
  */
 export async function runTestVerification(
   test: TestDefinition,
-  componentCode: string
+  componentCode: string,
 ): Promise<TestVerificationResult> {
   const startTime = Date.now();
 
@@ -126,7 +126,8 @@ export async function runTestVerification(
     // Get unhandled errors
     const unhandledErrors = vitest.state.getUnhandledErrors();
     for (const error of unhandledErrors) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       allErrors.push(errorMessage);
     }
 
@@ -143,7 +144,8 @@ export async function runTestVerification(
         numPassed: 0,
         numFailed: 0,
         duration: Date.now() - startTime,
-        error: allErrors.length > 0 ? allErrors.join("\n") : "No test modules found",
+        error:
+          allErrors.length > 0 ? allErrors.join("\n") : "No test modules found",
       };
     }
 
@@ -181,7 +183,11 @@ export async function runTestVerification(
               if (parent.name) {
                 ancestorTitles.unshift(parent.name);
               }
-              parent = ("parent" in parent ? (parent as { parent?: unknown }).parent : undefined) as typeof parent;
+              parent = (
+                "parent" in parent
+                  ? (parent as { parent?: unknown }).parent
+                  : undefined
+              ) as typeof parent;
             }
 
             const fullName =
@@ -202,7 +208,8 @@ export async function runTestVerification(
 
             failedTests.push({
               fullName,
-              errorMessage: errorMessages.join("\n") || "No error message available",
+              errorMessage:
+                errorMessages.join("\n") || "No error message available",
             });
           }
         }

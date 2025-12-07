@@ -1,4 +1,10 @@
-import { readdirSync, statSync, copyFileSync, unlinkSync, existsSync } from "node:fs";
+import {
+  readdirSync,
+  statSync,
+  copyFileSync,
+  unlinkSync,
+  existsSync,
+} from "node:fs";
 import { join } from "node:path";
 import { startVitest } from "vitest/node";
 
@@ -58,7 +64,9 @@ export function loadTestDefinitions(): TestDefinition[] {
             promptFile,
           });
         } else {
-          console.warn(`⚠️  Skipping ${entry}: missing Reference.svelte or test.ts`);
+          console.warn(
+            `⚠️  Skipping ${entry}: missing Reference.svelte or test.ts`,
+          );
         }
       }
     }
@@ -123,7 +131,8 @@ export async function runTest(testDef: TestDefinition): Promise<TestResult> {
     // Get unhandled errors
     const unhandledErrors = vitest.state.getUnhandledErrors();
     for (const error of unhandledErrors) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       allErrors.push(errorMessage);
     }
 
@@ -140,7 +149,8 @@ export async function runTest(testDef: TestDefinition): Promise<TestResult> {
         numPassed: 0,
         numFailed: 0,
         duration: Date.now() - startTime,
-        error: allErrors.length > 0 ? allErrors.join("\n") : "No test modules found",
+        error:
+          allErrors.length > 0 ? allErrors.join("\n") : "No test modules found",
       };
     }
 
@@ -178,7 +188,11 @@ export async function runTest(testDef: TestDefinition): Promise<TestResult> {
               if (parent.name) {
                 ancestorTitles.unshift(parent.name);
               }
-              parent = ("parent" in parent ? (parent as { parent?: unknown }).parent : undefined) as typeof parent;
+              parent = (
+                "parent" in parent
+                  ? (parent as { parent?: unknown }).parent
+                  : undefined
+              ) as typeof parent;
             }
 
             const fullName =
@@ -199,12 +213,16 @@ export async function runTest(testDef: TestDefinition): Promise<TestResult> {
 
             failedTests.push({
               fullName,
-              errorMessage: errorMessages.join("\n") || "No error message available",
+              errorMessage:
+                errorMessages.join("\n") || "No error message available",
             });
           }
         }
       } catch (err) {
-        console.error(`Error processing module tests for ${testDef.name}:`, err);
+        console.error(
+          `Error processing module tests for ${testDef.name}:`,
+          err,
+        );
         const errorMessage = err instanceof Error ? err.message : String(err);
         allErrors.push(errorMessage);
         passed = false;
@@ -303,7 +321,9 @@ export async function verifyAllReferences(): Promise<number> {
       if (result.passed) {
         console.log(`  ✓ All tests passed (${result.duration}ms)`);
       } else {
-        console.log(`  ✗ Tests failed (${result.numFailed}/${result.numTests} failed)`);
+        console.log(
+          `  ✗ Tests failed (${result.numFailed}/${result.numTests} failed)`,
+        );
         if (result.error) {
           console.log(`  Error: ${result.error}`);
         }

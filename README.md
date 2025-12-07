@@ -32,10 +32,12 @@ MCP_SERVER_URL=https://mcp.svelte.dev/mcp
 ### Environment Variables
 
 **Required:**
+
 - `MODEL`: The AI model to use (e.g., `anthropic/claude-sonnet-4`, `openai/gpt-5`, `openrouter/anthropic/claude-sonnet-4`)
 - Corresponding API key (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `OPENROUTER_API_KEY`)
 
 **Optional:**
+
 - `MCP_SERVER_URL`: MCP server URL (leave empty to disable MCP integration)
 
 ## Usage
@@ -47,6 +49,7 @@ bun run index.ts
 ```
 
 The benchmark will:
+
 1. Discover all tests in `tests/` directory
 2. For each test:
    - Run the AI agent with the test's prompt
@@ -55,10 +58,12 @@ The benchmark will:
 3. Generate a combined report with all results
 
 Results are saved to the `results/` directory with timestamped filenames:
+
 - `results/result-2024-12-07-14-30-45.json` - Full execution trace with all test results
 - `results/result-2024-12-07-14-30-45.html` - Interactive HTML report with expandable test sections
 
 The HTML report includes:
+
 - Summary bar showing passed/failed/skipped counts
 - Expandable sections for each test
 - Step-by-step execution trace
@@ -91,6 +96,7 @@ tests/
 ```
 
 The benchmark:
+
 1. Reads the prompt from `prompt.md`
 2. Asks the agent to generate a component
 3. Writes the generated component to a temporary location
@@ -124,6 +130,7 @@ MCP status is documented in both the JSON metadata and displayed as a badge in t
 ## Documentation
 
 See [AGENTS.md](AGENTS.md) for detailed documentation on:
+
 - Architecture and components
 - Environment variables and model configuration
 - MCP integration details

@@ -89,9 +89,7 @@ function renderContentBlock(block: ContentBlock): string {
 </details>`;
   } else if (block.type === "tool-result") {
     const outputText = block.output?.content
-      ? block.output.content
-          .map((c) => c.text || JSON.stringify(c))
-          .join("\n")
+      ? block.output.content.map((c) => c.text || JSON.stringify(c)).join("\n")
       : "No output";
     const isError = block.output?.isError || false;
     const statusIcon = isError ? "✗" : "✓";
@@ -106,7 +104,9 @@ function renderContentBlock(block: ContentBlock): string {
 /**
  * Render verification result section
  */
-function renderVerificationResult(verification: TestVerificationResult | null): string {
+function renderVerificationResult(
+  verification: TestVerificationResult | null,
+): string {
   if (!verification) {
     return `<div class="verification-result skipped">
       <span class="verification-icon">⊘</span>
@@ -125,7 +125,7 @@ function renderVerificationResult(verification: TestVerificationResult | null): 
         (ft) => `<li class="failed-test">
           <div class="failed-test-name">${escapeHtml(ft.fullName)}</div>
           <pre class="failed-test-error">${escapeHtml(ft.errorMessage)}</pre>
-        </li>`
+        </li>`,
       )
       .join("");
     failedTestsHtml = `<details class="failed-tests-details">
@@ -175,7 +175,7 @@ function renderSteps(steps: Step[]): string {
         <span class="step-num">Step ${index + 1}</span>
         <span class="line"></span>
         <span class="tokens" title="Total tokens: ${step.usage.totalTokens.toLocaleString()}&#10;Input: ${inputTokens.toLocaleString()} (${uncachedInputTokens.toLocaleString()} new + ${cachedTokens.toLocaleString()} cached)&#10;Output: ${step.usage.outputTokens.toLocaleString()}">${step.usage.totalTokens.toLocaleString()} tok</span>
-        <span class="output" title="Output tokens generated: ${step.usage.outputTokens.toLocaleString()}&#10;${cachedTokens > 0 ? `Cached input tokens (⚡): ${cachedTokens.toLocaleString()} (not billed)` : 'No cached tokens'}">(${step.usage.outputTokens.toLocaleString()}↑${cachedInfo})</span>
+        <span class="output" title="Output tokens generated: ${step.usage.outputTokens.toLocaleString()}&#10;${cachedTokens > 0 ? `Cached input tokens (⚡): ${cachedTokens.toLocaleString()} (not billed)` : "No cached tokens"}">(${step.usage.outputTokens.toLocaleString()}↑${cachedInfo})</span>
         <span class="reason">${step.finishReason}</span>
       </summary>
       <div class="step-content">
@@ -190,7 +190,10 @@ function renderSteps(steps: Step[]): string {
  * Render a single test's section
  */
 function renderTestSection(test: SingleTestResult, index: number): string {
-  const totalTokens = test.steps.reduce((sum, step) => sum + step.usage.totalTokens, 0);
+  const totalTokens = test.steps.reduce(
+    (sum, step) => sum + step.usage.totalTokens,
+    0,
+  );
   const stepCount = test.steps.length;
   const verificationStatus = test.verification
     ? test.verification.passed
@@ -248,12 +251,15 @@ export function generateMultiTestHtml(data: MultiTestResultData): string {
   const metadata = data.metadata;
   const totalTests = data.tests.length;
   const passedTests = data.tests.filter((t) => t.verification?.passed).length;
-  const failedTests = data.tests.filter((t) => t.verification && !t.verification.passed).length;
+  const failedTests = data.tests.filter(
+    (t) => t.verification && !t.verification.passed,
+  ).length;
   const skippedTests = data.tests.filter((t) => !t.verification).length;
 
   const totalTokens = data.tests.reduce(
-    (sum, test) => sum + test.steps.reduce((s, step) => s + step.usage.totalTokens, 0),
-    0
+    (sum, test) =>
+      sum + test.steps.reduce((s, step) => s + step.usage.totalTokens, 0),
+    0,
   );
 
   const mcpBadge = metadata.mcpEnabled

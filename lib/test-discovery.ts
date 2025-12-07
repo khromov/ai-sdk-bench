@@ -32,7 +32,11 @@ export function discoverTests(): TestDefinition[] {
         const componentFile = join(entryPath, "Component.svelte");
 
         // Validate that required files exist
-        if (existsSync(referenceFile) && existsSync(testFile) && existsSync(promptFile)) {
+        if (
+          existsSync(referenceFile) &&
+          existsSync(testFile) &&
+          existsSync(promptFile)
+        ) {
           // Load the prompt content
           const prompt = readFileSync(promptFile, "utf-8");
 

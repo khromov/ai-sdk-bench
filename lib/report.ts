@@ -105,7 +105,7 @@ interface LegacyResultData {
 export async function generateReport(
   resultPath: string,
   outputPath: string,
-  openBrowser = true
+  openBrowser = true,
 ): Promise<void> {
   try {
     // Read and parse the result.json file

@@ -17,12 +17,13 @@ interface ProviderConfig {
  * @throws Error if required API key is missing or model format is invalid
  */
 export function getModelProvider(config: ProviderConfig): LanguageModel {
-  const { modelString, anthropicApiKey, openaiApiKey, openrouterApiKey } = config;
+  const { modelString, anthropicApiKey, openaiApiKey, openrouterApiKey } =
+    config;
 
   // Validate model string format
   if (!modelString || typeof modelString !== "string") {
     throw new Error(
-      "MODEL environment variable is required and must be a string"
+      "MODEL environment variable is required and must be a string",
     );
   }
 
@@ -68,7 +69,7 @@ export function getModelProvider(config: ProviderConfig): LanguageModel {
 
   // Invalid format
   throw new Error(
-    `Invalid MODEL format: "${modelString}". Must start with "anthropic/", "openai/", or "openrouter/"`
+    `Invalid MODEL format: "${modelString}". Must start with "anthropic/", "openai/", or "openrouter/"`,
   );
 }
 
@@ -85,7 +86,7 @@ export function loadEnvConfig(): ProviderConfig {
   // Model is required
   if (!modelString) {
     throw new Error(
-      "MODEL environment variable is required. Format: 'anthropic/model-name', 'openai/model-name', or 'openrouter/provider/model-name'"
+      "MODEL environment variable is required. Format: 'anthropic/model-name', 'openai/model-name', or 'openrouter/provider/model-name'",
     );
   }
 

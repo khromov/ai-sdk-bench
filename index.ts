@@ -32,6 +32,8 @@ function getTimestampedFilename(prefix: string, extension: string): string {
 const mcpServerUrl = process.env.MCP_SERVER_URL || "";
 const mcpEnabled = mcpServerUrl.trim() !== "";
 
+console.log("=== SvelteBench 2.0 ===");
+console.log(`Model: ${process.env.MODEL}`);
 console.log(`MCP Integration: ${mcpEnabled ? "Enabled" : "Disabled"}`);
 if (mcpEnabled) {
   console.log(`MCP Server URL: ${mcpServerUrl}`);

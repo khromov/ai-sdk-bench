@@ -176,7 +176,7 @@ function generateHtml(data: ResultData): string {
   const summary = calculateSummary(data);
 
   const mcpBadge = summary.mcpEnabled
-    ? `<span class="mcp-badge enabled" title="MCP Server: ${escapeHtml(summary.mcpServerUrl || '')}">MCP ✓</span>`
+    ? `<span class="mcp-badge enabled">MCP: ${escapeHtml(summary.mcpServerUrl || '')}</span>`
     : `<span class="mcp-badge disabled">MCP ✗</span>`;
 
   const mcpNotice = !summary.mcpEnabled
@@ -313,12 +313,12 @@ function generateHtml(data: ResultData): string {
       padding: 2px 6px;
       border-radius: 3px;
       font-weight: 500;
+      white-space: nowrap;
     }
 
     .mcp-badge.enabled {
       background: var(--mcp-enabled);
       color: white;
-      cursor: help;
     }
 
     .mcp-badge.disabled {

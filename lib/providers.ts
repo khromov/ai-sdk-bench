@@ -1,6 +1,7 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { openai } from "@ai-sdk/openai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import type { LanguageModel } from "ai";
 
 interface ProviderConfig {
@@ -67,9 +68,22 @@ export function getModelProvider(config: ProviderConfig): LanguageModel {
     return openrouter.chat(modelPath);
   }
 
+  // Route to LM Studio provider (OpenAI-compatible)
+  if (modelString.startsWith("lmstudio/")) {
+    // Create LM Studio provider instance
+    const lmstudio = createOpenAICompatible({
+      name: "lmstudio",
+      baseURL: "http://localhost:1234/v1",
+    });
+
+    // Extract model name (e.g., "lmstudio/model-name" -> "model-name")
+    const modelName = modelString.replace("lmstudio/", "");
+    return lmstudio(modelName);
+  }
+
   // Invalid format
   throw new Error(
-    `Invalid MODEL format: "${modelString}". Must start with "anthropic/", "openai/", or "openrouter/"`,
+    `Invalid MODEL format: "${modelString}". Must start with "anthropic/", "openai/", "openrouter/", or "lmstudio/"`,
   );
 }
 
@@ -86,7 +100,7 @@ export function loadEnvConfig(): ProviderConfig {
   // Model is required
   if (!modelString) {
     throw new Error(
-      "MODEL environment variable is required. Format: 'anthropic/model-name', 'openai/model-name', or 'openrouter/provider/model-name'",
+      "MODEL environment variable is required. Format: 'anthropic/model-name', 'openai/model-name', 'openrouter/provider/model-name', or 'lmstudio/model-name'",
     );
   }
 

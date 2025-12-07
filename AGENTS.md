@@ -53,6 +53,14 @@ MODEL=openrouter/google/gemini-pro
 MODEL=openrouter/meta-llama/llama-3.1-405b-instruct
 ```
 
+**LM Studio (Local models via OpenAI-compatible API):**
+
+```bash
+MODEL=lmstudio/model-name
+```
+
+LM Studio runs a local OpenAI-compatible API server on `http://localhost:1234/v1`. Make sure LM Studio is running with a model loaded before using this provider.
+
 ### MCP Server Configuration
 
 The `MCP_SERVER_URL` environment variable controls MCP (Model Context Protocol) integration. The tool automatically detects whether to use HTTP or StdIO transport based on the value format.
@@ -101,6 +109,7 @@ MCP_SERVER_URL=
 - `ANTHROPIC_API_KEY`: Required when using `anthropic/*` models
 - `OPENAI_API_KEY`: Required when using `openai/*` models (get at https://platform.openai.com/api-keys)
 - `OPENROUTER_API_KEY`: Required when using `openrouter/*` models (get at https://openrouter.ai/keys)
+- No API key required for `lmstudio/*` models (runs locally)
 
 ### Provider Routing
 
@@ -109,6 +118,7 @@ The benchmark tool automatically routes to the correct provider based on the `MO
 - `anthropic/*` → Direct Anthropic API
 - `openai/*` → Direct OpenAI API
 - `openrouter/*` → OpenRouter unified API
+- `lmstudio/*` → LM Studio local server (OpenAI-compatible)
 
 This allows switching models and providers without any code changes.
 
@@ -154,6 +164,7 @@ tests/
 - **Vercel AI SDK v5**: Agent framework with tool calling
 - **@ai-sdk/anthropic**: Anthropic provider for direct API access
 - **@ai-sdk/openai**: OpenAI provider for direct API access
+- **@ai-sdk/openai-compatible**: OpenAI-compatible provider for LM Studio and other local servers
 - **@openrouter/ai-sdk-provider**: OpenRouter provider for unified access to 300+ models
 - **@ai-sdk/mcp**: MCP client integration (with custom patch)
 - **Bun Runtime**: JavaScript runtime (not Node.js)
@@ -255,3 +266,4 @@ This naming convention allows you to:
 - MCP integration can be toggled via `MCP_SERVER_URL` environment variable without code changes
 - MCP status is clearly indicated in both the JSON metadata and HTML report with a visual badge
 - Exit code is 0 if all tests pass, 1 if any tests fail
+- LM Studio provider requires LM Studio to be running locally with a model loaded

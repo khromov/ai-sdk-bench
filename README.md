@@ -33,12 +33,43 @@ MCP_SERVER_URL=https://mcp.svelte.dev/mcp
 
 **Required:**
 
-- `MODEL`: The AI model to use (e.g., `anthropic/claude-sonnet-4`, `openai/gpt-5`, `openrouter/anthropic/claude-sonnet-4`)
+- `MODEL`: The AI model to use (e.g., `anthropic/claude-sonnet-4`, `openai/gpt-5`, `openrouter/anthropic/claude-sonnet-4`, `lmstudio/model-name`)
 - Corresponding API key (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `OPENROUTER_API_KEY`)
+  - Note: No API key required for `lmstudio/*` models (runs locally)
 
 **Optional:**
 
 - `MCP_SERVER_URL`: MCP server URL (leave empty to disable MCP integration)
+
+### Supported Providers
+
+**Cloud Providers:**
+- `anthropic/*` - Direct Anthropic API (requires `ANTHROPIC_API_KEY`)
+- `openai/*` - Direct OpenAI API (requires `OPENAI_API_KEY`)
+- `openrouter/*` - OpenRouter unified API (requires `OPENROUTER_API_KEY`)
+
+**Local Providers:**
+- `lmstudio/*` - LM Studio local server (requires LM Studio running on `http://localhost:1234`)
+
+Example configurations:
+
+```bash
+# Anthropic
+MODEL=anthropic/claude-sonnet-4
+ANTHROPIC_API_KEY=sk-ant-...
+
+# OpenAI
+MODEL=openai/gpt-5
+OPENAI_API_KEY=sk-...
+
+# OpenRouter
+MODEL=openrouter/anthropic/claude-sonnet-4
+OPENROUTER_API_KEY=sk-or-...
+
+# LM Studio (local)
+MODEL=lmstudio/llama-3-8b
+# No API key needed - make sure LM Studio is running!
+```
 
 ## Usage
 
